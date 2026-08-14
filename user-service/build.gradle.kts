@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation(project(":common-data"))
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
@@ -39,6 +40,6 @@ dependencies {
 	testAnnotationProcessor("org.projectlombok:lombok")
 }
 
-tasks.withType<Test> {
-	useJUnitPlatform()
+tasks.bootJar {
+	archiveFileName.set("${project.name}.jar")
 }

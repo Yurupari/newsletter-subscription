@@ -1,37 +1,75 @@
-# Read Me First
-The following was discovered as part of building this project:
+# AGENTS.md — Guidance for automated coding/operational agents
 
-* The original package name 'com.yurupari.user-service' is invalid and this project uses 'com.yurupari.user_service' instead.
+Purpose: Give AI agents the minimal, actionable knowledge to build, run, and inspect the Newsletter Subscription project.
 
-# Getting Started
+Quick plan for agents
+- Bring up infra (PostgreSQL, Kafka, Prometheus, Grafana, KeyCloak, Mailpit, Kafka UI)
+- Build or run a single service locally
 
-### Reference Documentation
-For further reference, please consider the following sections:
+Quick start (infra)
+- From repo root: `docker-compose -f docker-compose-local.yaml up -d` (uses `docker-compose-local.yaml`)
+- Stop: `docker-compose down`
+- If DB issues occur: remove/recreate volumes or re-run `docker/postgres/init.sql`
 
-* [Official Gradle documentation](https://docs.gradle.org)
-* [Spring Boot Gradle Plugin Reference Guide](https://docs.spring.io/spring-boot/4.1.0/gradle-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/4.1.0/gradle-plugin/packaging-oci-image.html)
-* [Spring Data JPA](https://docs.spring.io/spring-boot/4.1.0/reference/data/sql.html#data.sql.jpa-and-spring-data)
-* [Spring Web](https://docs.spring.io/spring-boot/4.1.0/reference/web/servlet.html)
-* [Spring Security](https://docs.spring.io/spring-boot/4.1.0/reference/web/spring-security.html)
-* [Flyway Migration](https://docs.spring.io/spring-boot/4.1.0/how-to/data-initialization.html#howto.data-initialization.migration-tool.flyway)
-* [Spring Boot Actuator](https://docs.spring.io/spring-boot/4.1.0/reference/actuator/index.html)
-* [OAuth2 Resource Server](https://docs.spring.io/spring-boot/4.1.0/reference/web/spring-security.html#web.security.oauth2.server)
+Build / run a service
+- Build: `./gradlew build`
+- Build each service `./gradlew :<service>:build`
 
-### Guides
-The following guides illustrate how to use some features concretely:
+Architecture & key components
+- Microservices (top-level dirs): `user-service`.
+- Stack: **Spring Boot 4.1.0** + **Java 25** for all services. No Spring Cloud Config Server in this repo—config is per-service `application.yaml`.
+- Important infra files: `docker-compose.yaml`, `docker-compose-local.yaml`, `docker/postgres/init.sql`, `docker/kafka_data/`.
+- Human-oriented architecture diagrams: `diagrams/*.png` (see top-level `README.md`).
 
-* [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-* [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
-* [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
-* [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
-* [Building a RESTful Web Service with Spring Boot Actuator](https://spring.io/guides/gs/actuator-service/)
+Critical integration points & dataflows (explicit)
+- PostgreSQL: DB name `newsletter`, init in `docker/postgres/init.sql`; JDBC URLs appear in `src/main/resources/application.yaml`.
 
-### Additional Links
-These additional references should also help you:
+Observability & useful endpoints
+- Kafka UI: http://localhost:8070 (inspect topics and messages)
+- Mailpit (SMTP/web): SMTP **1025**, web UI http://localhost:8025 (outgoing email from `alert-service`)
+- InfluxDB (UI/API): http://localhost:8072 (org/bucket/token from `docker-compose.yaml` env vars, e.g. bucket `usage-bucket`)
+- Service ports (defaults in `application.yaml`):
+    - `user-service` **8080**
 
-* [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
+Agent runbook checks (short)
+- Confirm ports reachable: **5432** (PostgreSQL)
+- Check service logs: `docker-compose logs <container>` or run the JAR locally and capture stdout
 
+Project-specific conventions
+- Gradle wrapper present in root folder — prefer `./gradlew`.
+- Package names use underscores: e.g. `com.yurupari.calendar`.
+
+Files to reference when automating (examples)
+- `docker-compose.yaml` — infra and envs
+- `docker-compose-local.yaml` — infra and envs for local development
+- `docker/postgres/init.sql` — DB bootstrap
+- `user-service/src/main/java/com/yurupari/user_service/controller/v1/UserControllerV1.java`
+
+Testing
+- Integration tests are in `src/test/java/com/yurupari/calendar/CalendarApplicationTests.java`
+- The unit tests share the same routes as each of their classes
+
+Notes
+- Java version: use **JDK 25**.
+- The top-level `README.md`.
+
+# Problem context
+## Backend Coding Challenge: Newsletter Subscription
+
+Your task is to provide a high level overview of the interacting systems/components needed to provide a solution for a given requirement. Please describe in short words why you would set up the system in that way.
+
+### Requirement
+
+The starting point is a platform where users are able to register, update and delete their accounts. Within these accounts the user can subscribe, unsubscribe to several  different newsletters (please note that every newsletter subscription is only valid after a  double opt-in).
+
+The user data should be forwarded to a CDP directly or indirectly to the API of the CDP (no direct connection between the database of the platform and the CDP is possible,  due to security reasons) which then forwards updates to an external email marketing  service if needed.
+
+Make sure that the designed system is scalable and resilient against the most common  error cases like:
+
+- Network issues
+- Outage of the single services
+- Latency of several minutes of the systems due to peak times
+
+The platform should be able to retrieve current subscription data instantly.
+
+End of AGENTS.md
