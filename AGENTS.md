@@ -16,7 +16,7 @@ Build / run a service
 - Build each service `./gradlew :<service>:build`
 
 Architecture & key components
-- Microservices (top-level dirs): `user-service`.
+- Microservices (top-level dirs): `api-gateway`, `newsletter-service`, `user-service`.
 - Stack: **Spring Boot 4.1.0** + **Java 25** for all services. No Spring Cloud Config Server in this repo—config is per-service `application.yaml`.
 - Important infra files: `docker-compose.yaml`, `docker-compose-local.yaml`, `docker/postgres/init.sql`, `docker/kafka_data/`.
 - Human-oriented architecture diagrams: `diagrams/*.png` (see top-level `README.md`).
@@ -29,7 +29,9 @@ Observability & useful endpoints
 - Mailpit (SMTP/web): SMTP **1025**, web UI http://localhost:8025 (outgoing email from `alert-service`)
 - InfluxDB (UI/API): http://localhost:8072 (org/bucket/token from `docker-compose.yaml` env vars, e.g. bucket `usage-bucket`)
 - Service ports (defaults in `application.yaml`):
+    - `api-gateway` **9000**
     - `user-service` **8080**
+    - `newsletter-service` **8082**
 
 Agent runbook checks (short)
 - Confirm ports reachable: **5432** (PostgreSQL)
@@ -44,10 +46,6 @@ Files to reference when automating (examples)
 - `docker-compose-local.yaml` — infra and envs for local development
 - `docker/postgres/init.sql` — DB bootstrap
 - `user-service/src/main/java/com/yurupari/user_service/controller/v1/UserControllerV1.java`
-
-Testing
-- Integration tests are in `src/test/java/com/yurupari/calendar/CalendarApplicationTests.java`
-- The unit tests share the same routes as each of their classes
 
 Notes
 - Java version: use **JDK 25**.
