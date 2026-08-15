@@ -1,0 +1,19 @@
+services:
+  items:
+    user-service:
+      url: http://localhost:9999
+      path: /api/v1/user/**
+      circuitBreakerId: userServiceCircuitBreaker
+      fallbackPath: /fallback/user
+      fallbackMessage: User service is down
+
+keycloak:
+  auth:
+    jwt-set-uri: http://localhost:9999/jwt-set-uri
+
+security:
+  excluded:
+    urls:
+      - /actuator/**
+      - /api/v1/user/auth/**
+      - /api/v1/newsletter/confirm
