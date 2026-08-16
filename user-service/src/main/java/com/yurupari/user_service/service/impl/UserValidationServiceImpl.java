@@ -1,9 +1,9 @@
 package com.yurupari.user_service.service.impl;
 
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.service.EncryptionService;
 import com.yurupari.user_service.service.UserValidationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,7 +25,7 @@ public class UserValidationServiceImpl implements UserValidationService {
         var decryptedPassword = encryptionService.decrypt(encryptedPassword);
 
         if (!decryptedPassword.equals(password)) {
-            throw new BadCredentialsException("Passwords do not match");
+            throw new AuthenticationException("Passwords do not match");
         }
     }
 

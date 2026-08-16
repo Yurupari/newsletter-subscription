@@ -1,17 +1,16 @@
 package com.yurupari.user_service.error;
 
 import com.yurupari.common_data.model.http.ErrorResponse;
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.KeycloakClientException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
 import com.yurupari.user_service.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.time.Instant;
 import java.time.OffsetDateTime;
 
 @ControllerAdvice
@@ -37,7 +36,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponse> handleBadCredentialsException(BadCredentialsException e) {
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException e) {
         var errorResponse = buildErrorResponse(HttpStatus.UNAUTHORIZED, e.getMessage());
         return new ResponseEntity<>(errorResponse, errorResponse.httpStatus());
     }

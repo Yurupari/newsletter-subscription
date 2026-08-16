@@ -1,5 +1,6 @@
 package com.yurupari.user_service.service.impl;
 
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
 import com.yurupari.user_service.exception.UserNotFoundException;
 import com.yurupari.user_service.model.entity.User;
@@ -21,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.BadCredentialsException;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -167,23 +167,23 @@ class UserServiceImplTest {
     void login_Fail_UserNotFound() {
         when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.empty());
 
-        assertThrows(BadCredentialsException.class, () -> userService.login(loginRequest));
+        assertThrows(AuthenticationException.class, () -> userService.login(loginRequest));
     }
 
     @Test
     void login_Fail_InactiveUser() {
         when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(deletedUser));
 
-        assertThrows(BadCredentialsException.class, () -> userService.login(loginRequest));
+        assertThrows(AuthenticationException.class, () -> userService.login(loginRequest));
     }
 
     @Test
     void login_Fail_WrongPassword() {
         when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(user));
-        doThrow(new BadCredentialsException("Invalid email or password"))
+        doThrow(new AuthenticationException("Invalid email or password"))
                 .when(userValidationService).validateUser(user.getPassword(), loginRequest.password());
 
-        assertThrows(BadCredentialsException.class, () -> userService.login(loginRequest));
+        assertThrows(AuthenticationException.class, () -> userService.login(loginRequest));
     }
 
     @Test

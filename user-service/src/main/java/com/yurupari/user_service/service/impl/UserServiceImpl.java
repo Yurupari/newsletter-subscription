@@ -1,5 +1,6 @@
 package com.yurupari.user_service.service.impl;
 
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
 import com.yurupari.user_service.exception.UserNotFoundException;
 import com.yurupari.user_service.model.dto.UserDto;
@@ -17,7 +18,6 @@ import com.yurupari.user_service.service.UserService;
 import com.yurupari.user_service.service.UserValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
 
         var user = userRepository.findByEmail(email)
                 .filter(u -> UserStatus.ACTIVE.equals(u.getStatus()))
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+                .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
 
         userValidationService.validateUser(user.getPassword(), loginRequest.password());
 

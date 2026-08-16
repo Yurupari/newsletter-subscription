@@ -18,22 +18,22 @@ spring:
 services:
   items:
     user-service:
-      url: ${USER_SERVICE_URL:http://localhost:8081}
+      url: ${USER_SERVICE_URL}
       path: /api/v1/user/**
       circuitBreakerId: userServiceCircuitBreaker
       fallbackPath: /fallback/user
-      fallbackMessage: "User Service is currently unavailable. Please try again later."
+      fallbackMessage: "User Service is currently unavailable"
 
     newsletter-service:
-      url: ${NEWSLETTER_SERVICE_URL:http://localhost:8082}
+      url: ${NEWSLETTER_SERVICE_URL}
       path: /api/v1/newsletter/**
       circuitBreakerId: newsletterServiceCircuitBreaker
       fallbackPath: /fallback/newsletter
-      fallbackMessage: "Newsletter Service is currently unavailable. Your request will be retried automatically."
+      fallbackMessage: "Newsletter Service is currently unavailable"
 
 security:
   excluded:
-    urls: /actuator/**, /api/v1/user/register/**, /api/v1/user/auth/**, /api/v1/newsletter/confirm
+    urls: /actuator/**, /api/v1/user/register/**, /api/v1/auth/login/**, /api/v1/newsletter/confirm/**
 
 resilience4j:
   circuitbreaker:

@@ -1,12 +1,12 @@
 package com.yurupari.user_service.service.impl;
 
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.service.EncryptionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -39,7 +39,7 @@ class UserValidationServiceImplTest {
 
         when(encryptionService.decrypt(encryptedPassword)).thenReturn(correctPassword);
 
-        assertThrows(BadCredentialsException.class,
+        assertThrows(AuthenticationException.class,
                 () -> userValidationService.validateUser(encryptedPassword, wrongPassword));
     }
 

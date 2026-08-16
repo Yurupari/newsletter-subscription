@@ -1,5 +1,6 @@
 package com.yurupari.user_service.controller.v1;
 
+import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.model.http.request.LoginRequest;
 import com.yurupari.user_service.model.http.response.AuthenticationResponse;
 import com.yurupari.user_service.service.UserService;
@@ -12,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -59,8 +59,8 @@ class AuthenticationControllerV1Test {
 
     @Test
     void login_Fail_BadCredentials() {
-        when(userService.login(any(LoginRequest.class))).thenThrow(new BadCredentialsException("Invalid credentials"));
+        when(userService.login(any(LoginRequest.class))).thenThrow(new AuthenticationException("Invalid credentials"));
 
-        assertThrows(BadCredentialsException.class, () -> authenticationControllerV1.login(loginRequest));
+        assertThrows(AuthenticationException.class, () -> authenticationControllerV1.login(loginRequest));
     }
 }

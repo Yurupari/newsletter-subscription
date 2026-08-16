@@ -74,6 +74,7 @@ services:
     container_name: newsletter-subscription-api-gateway
     environment:
       - USER_SERVICE_URL=http://user-service:8080
+      - NEWSLETTER_SERVICE_URL=http://newsletter-service:8081
       - JWT_SET_URI=http://keycloak:8080/realms/ns-security-realm/protocol/openid-connect/certs
       - ISSUER_URI=http://keycloak:8080/realms/ns-security-realm
     volumes:
