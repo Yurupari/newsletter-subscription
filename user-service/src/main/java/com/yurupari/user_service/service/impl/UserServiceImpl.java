@@ -93,11 +93,13 @@ public class UserServiceImpl implements UserService {
                 .map(String::toLowerCase)
                 .orElse(null);
 
-        var user = userRepository.findByIdOrEmail(id, formattedEmail)
+        var users = userRepository.findByIdOrEmail(id, formattedEmail).stream()
                 .filter(u -> UserStatus.ACTIVE.equals(u.getStatus()))
-                .orElseThrow(() -> new UserNotFoundException(id, formattedEmail));
+                .toList();
 
-        return userMapper.toUserResponse(user);
+        userValidationService.validateUsers(id, formattedEmail, users);
+
+        return userMapper.toUserResponse(users.getFirst());
     }
 
     @Override
@@ -111,9 +113,12 @@ public class UserServiceImpl implements UserService {
                 .map(String::toLowerCase)
                 .orElse(null);
 
-        var user = userRepository.findByIdOrEmail(id, formattedEmail)
+        var users = userRepository.findByIdOrEmail(id, formattedEmail).stream()
                 .filter(u -> UserStatus.ACTIVE.equals(u.getStatus()))
-                .orElseThrow(() -> new UserNotFoundException(id, formattedEmail));
+                .toList();
+
+        userValidationService.validateUsers(id, formattedEmail, users);
+        var user = users.getFirst();
 
         userMapper.updateEntityFromUserRequest(updateRequest, user);
 
@@ -133,9 +138,12 @@ public class UserServiceImpl implements UserService {
                 .map(String::toLowerCase)
                 .orElse(null);
 
-        var user = userRepository.findByIdOrEmail(id, formattedEmail)
+        var users = userRepository.findByIdOrEmail(id, formattedEmail).stream()
                 .filter(u -> UserStatus.ACTIVE.equals(u.getStatus()))
-                .orElseThrow(() -> new UserNotFoundException(id, formattedEmail));
+                .toList();
+
+        userValidationService.validateUsers(id, formattedEmail, users);
+        var user = users.getFirst();
 
         user.setStatus(UserStatus.DELETED);
 

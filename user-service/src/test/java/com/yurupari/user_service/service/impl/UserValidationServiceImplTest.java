@@ -1,12 +1,18 @@
 package com.yurupari.user_service.service.impl;
 
 import com.yurupari.user_service.exception.AuthenticationException;
+import com.yurupari.user_service.exception.MultipleUsersException;
+import com.yurupari.user_service.exception.UserNotFoundException;
+import com.yurupari.user_service.model.entity.User;
 import com.yurupari.user_service.service.EncryptionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -78,5 +84,25 @@ class UserValidationServiceImplTest {
     void validateUserIdAndEmail_WithNullIdAndNullEmail() {
         assertThrows(IllegalArgumentException.class,
                 () -> userValidationService.validateUserIdAndEmail(null, null));
+    }
+
+    @Test
+    void validateUsers_Success_WithSingleUser() {
+        List<User> users = List.of(new User());
+        assertDoesNotThrow(() -> userValidationService.validateUsers(1L, "test@example.com", users));
+    }
+
+    @Test
+    void validateUsers_Fail_WithEmptyList() {
+        List<User> users = Collections.emptyList();
+        assertThrows(UserNotFoundException.class,
+                () -> userValidationService.validateUsers(1L, "test@example.com", users));
+    }
+
+    @Test
+    void validateUsers_Fail_WithMultipleUsers() {
+        List<User> users = List.of(new User(), new User());
+        assertThrows(MultipleUsersException.class,
+                () -> userValidationService.validateUsers(1L, "test@example.com", users));
     }
 }

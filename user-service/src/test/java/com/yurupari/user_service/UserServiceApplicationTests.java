@@ -197,6 +197,37 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	}
 
 	@Test
+	void getUser_Fail_MultipleUsersFound() throws Exception {
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"john.doe@test.com",
+				"encryptedPassword",
+				"John",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"erika.doe@test.com",
+				"encryptedPassword2",
+				"Erika",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+
+		mockMvc.perform(get("/api/v1/user")
+						.param("id", "2")
+						.param("email", "john.doe@test.com"))
+				.andExpect(status().isInternalServerError());
+	}
+
+	@Test
 	void updateUserById_Success_Updated() throws Exception {
 		var savedUser = userRepository.saveAndFlush(TestModelFactory.createUser(
 				null,
@@ -266,6 +297,41 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	}
 
 	@Test
+	void updateUser_Fail_MultipleUsersFound() throws Exception {
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"john.doe@test.com",
+				"encryptedPassword",
+				"John",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"erika.doe@test.com",
+				"encryptedPassword2",
+				"Erika",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+		var requestJson = jsonTestUtils.loadRequest(UPDATE_USER_REQUEST_JSON);
+
+		mockMvc.perform(patch("/api/v1/user")
+						.param("id", "2")
+						.param("email", "john.doe@test.com")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestJson))
+				.andExpect(status().isInternalServerError());
+	}
+
+	@Test
 	void deleteUserById_Success_NoContent() throws Exception {
 		var savedUser = userRepository.saveAndFlush(TestModelFactory.createUser(
 				null,
@@ -314,6 +380,37 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		mockMvc.perform(delete("/api/v1/user")
 						.param("id", "999"))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteUser_Fail_MultipleUsersFound() throws Exception {
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"john.doe@test.com",
+				"encryptedPassword",
+				"John",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+		userRepository.saveAndFlush(TestModelFactory.createUser(
+				null,
+				"erika.doe@test.com",
+				"encryptedPassword2",
+				"Erika",
+				"Doe",
+				UserStatus.ACTIVE,
+				null,
+				null,
+				null
+		));
+
+		mockMvc.perform(delete("/api/v1/user")
+						.param("id", "2")
+						.param("email", "john.doe@test.com"))
+				.andExpect(status().isInternalServerError());
 	}
 
 	// --------------- AuthenticationControllerV1 ---------------

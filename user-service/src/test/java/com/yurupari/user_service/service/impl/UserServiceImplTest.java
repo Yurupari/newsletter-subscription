@@ -24,12 +24,15 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -188,7 +191,7 @@ class UserServiceImplTest {
 
     @Test
     void getUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
 
         var response = userService.getUser(user.getId(), user.getEmail());
 
@@ -199,7 +202,7 @@ class UserServiceImplTest {
 
     @Test
     void getUser_Success_WithNullEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(List.of(user));
 
         var response = userService.getUser(user.getId(), null);
 
@@ -210,21 +213,27 @@ class UserServiceImplTest {
 
     @Test
     void getUser_Fail_UserNotFound() {
-        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Optional.empty());
+        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Collections.emptyList());
+        doThrow(UserNotFoundException.class)
+                .when(userValidationService)
+                .validateUsers(anyLong(), anyString(), any());
 
         assertThrows(UserNotFoundException.class, () -> userService.getUser(user.getId(), user.getEmail()));
     }
 
     @Test
     void getUser_Fail_InactiveUser() {
-        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Optional.of(deletedUser));
+        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(List.of(deletedUser));
+        doThrow(UserNotFoundException.class)
+                .when(userValidationService)
+                .validateUsers(anyLong(), anyString(), any());
 
         assertThrows(UserNotFoundException.class, () -> userService.getUser(user.getId(), user.getEmail()));
     }
 
     @Test
     void updateUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = userService.updateUser(user.getId(), user.getEmail(), userUpdateRequest);
@@ -237,7 +246,7 @@ class UserServiceImplTest {
 
     @Test
     void updateUser_Success_WithNullEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(List.of(user));
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = userService.updateUser(user.getId(), null, userUpdateRequest);
@@ -250,14 +259,17 @@ class UserServiceImplTest {
 
     @Test
     void updateUser_Fail_UserNotFound() {
-        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Optional.empty());
+        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Collections.emptyList());
+        doThrow(UserNotFoundException.class)
+                .when(userValidationService)
+                .validateUsers(anyLong(), anyString(), any());
 
         assertThrows(UserNotFoundException.class, () -> userService.updateUser(user.getId(), user.getEmail(), userUpdateRequest));
     }
 
     @Test
     void deleteUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
 
         userService.deleteUser(user.getId(), user.getEmail());
 
@@ -267,7 +279,7 @@ class UserServiceImplTest {
 
     @Test
     void deleteUser_Success_WithNullEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(List.of(user));
 
         userService.deleteUser(user.getId(), null);
 
@@ -277,7 +289,10 @@ class UserServiceImplTest {
 
     @Test
     void deleteUser_Fail_UserNotFound() {
-        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Optional.empty());
+        when(userRepository.findByIdOrEmail(any(), anyString())).thenReturn(Collections.emptyList());
+        doThrow(UserNotFoundException.class)
+                .when(userValidationService)
+                .validateUsers(anyLong(), anyString(), any());
 
         assertThrows(UserNotFoundException.class, () -> userService.deleteUser(user.getId(), user.getEmail()));
     }
