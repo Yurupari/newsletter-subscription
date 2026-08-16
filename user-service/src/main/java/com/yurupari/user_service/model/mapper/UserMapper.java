@@ -3,6 +3,8 @@ package com.yurupari.user_service.model.mapper;
 import com.yurupari.common_data.config.CentralMapperConfig;
 import com.yurupari.user_service.model.dto.UserDto;
 import com.yurupari.user_service.model.entity.User;
+import com.yurupari.user_service.model.http.request.UserUpdateRequest;
+import com.yurupari.user_service.model.http.response.UserResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -17,9 +19,14 @@ public interface UserMapper {
 
     UserDto toDto(User user);
 
-    @Mapping(target = "status", defaultValue = "ACTIVE")
+    UserResponse toUserResponse(User user);
+
     User toEntity(UserDto userDto);
 
     @Mapping(target = "id", ignore = true)
     void updateEntityFromDto(UserDto userDto, @MappingTarget User user);
+
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    void updateEntityFromUserRequest(UserUpdateRequest userUpdateRequest, @MappingTarget User user);
 }

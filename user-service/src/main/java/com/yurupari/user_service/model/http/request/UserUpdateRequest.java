@@ -1,11 +1,9 @@
-package com.yurupari.user_service.model.dto;
+package com.yurupari.user_service.model.http.request;
 
 import lombok.Builder;
 
 @Builder
-public record UserDto(
-        Long id,
-        String email,
+public record UserUpdateRequest(
         String password,
         String firstName,
         String lastName

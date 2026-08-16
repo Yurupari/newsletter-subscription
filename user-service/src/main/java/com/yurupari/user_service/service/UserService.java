@@ -2,6 +2,7 @@ package com.yurupari.user_service.service;
 
 import com.yurupari.user_service.model.http.request.LoginRequest;
 import com.yurupari.user_service.model.http.request.UserRequest;
+import com.yurupari.user_service.model.http.request.UserUpdateRequest;
 import com.yurupari.user_service.model.http.response.AuthenticationResponse;
 import com.yurupari.user_service.model.http.response.UserResponse;
 
@@ -11,4 +12,8 @@ public interface UserService {
     AuthenticationResponse login(LoginRequest loginRequest);
 
     UserResponse getUser(Long id, String email);
+
+    UserResponse updateUser(Long id, String email, UserUpdateRequest updateRequest);
+
+    void deleteUser(Long id, String email);
 }

@@ -13,7 +13,4 @@ keycloak:
 
 security:
   excluded:
-    urls:
-      - /actuator/**
-      - /api/v1/user/auth/**
-      - /api/v1/newsletter/confirm
+    urls: /actuator/**, /api/v1/test/**

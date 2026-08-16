@@ -15,6 +15,7 @@ import static com.yurupari.api_gateway.model.enums.GatewayService.USER;
 public class UserServiceRoute {
 
     private final GatewayConfigProperties properties;
+
     private final GatewayRouteFactory routeFactory;
 
     @Bean
