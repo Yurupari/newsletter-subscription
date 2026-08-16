@@ -26,6 +26,7 @@ import static com.yurupari.user_service.utils.TestConstants.LOGIN_REQUEST_JSON;
 import static com.yurupari.user_service.utils.TestConstants.UPDATE_USER_REQUEST_JSON;
 import static com.yurupari.user_service.utils.TestConstants.USER_REQUEST_JSON;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -439,7 +440,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Bearer",
 				3600L
 		);
-		when(keycloakClient.authenticate(any())).thenReturn(authenticationResponse);
+		when(keycloakClient.authenticate(anyString(), any())).thenReturn(authenticationResponse);
 
 		mockMvc.perform(post("/api/v1/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)

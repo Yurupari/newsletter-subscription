@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,8 +28,7 @@ class AuthenticationServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(authService, "clientId", "client-id");
-        ReflectionTestUtils.setField(authService, "clientSecret", "client-secret");
+        ReflectionTestUtils.setField(authService, "realm", "realm");
     }
 
     @Test
@@ -44,7 +44,7 @@ class AuthenticationServiceImplTest {
                 "Bearer",
                 3600L
         );
-        when(keycloakClient.authenticate(any())).thenReturn(authenticationResponse);
+        when(keycloakClient.authenticate(anyString(), any())).thenReturn(authenticationResponse);
 
         var response = authService.authenticate(loginRequest);
 
@@ -62,7 +62,7 @@ class AuthenticationServiceImplTest {
                 "wrongPassword"
         );
 
-        when(keycloakClient.authenticate(any())).thenThrow(new RuntimeException("Keycloak error"));
+        when(keycloakClient.authenticate(anyString(), any())).thenThrow(new RuntimeException("Keycloak error"));
 
         assertThrows(RuntimeException.class, () -> {
             authService.authenticate(loginRequest);

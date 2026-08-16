@@ -7,7 +7,10 @@ import com.yurupari.user_service.model.http.response.AuthenticationResponse;
 import com.yurupari.user_service.model.http.response.UserResponse;
 
 public interface UserService {
+
     UserResponse registerUser(UserRequest userRequest);
+
+    void activateUser(Long id);
 
     AuthenticationResponse login(LoginRequest loginRequest);
 

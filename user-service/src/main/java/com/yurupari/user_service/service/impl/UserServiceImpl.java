@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -46,7 +47,8 @@ public class UserServiceImpl implements UserService {
 
         return userRepository.findByEmail(userRequest.email().toLowerCase())
                 .map(user -> {
-                    if (UserStatus.ACTIVE.equals(user.getStatus())) {
+                    var existingStatus = List.of(UserStatus.ACTIVE, UserStatus.PENDING_ACTIVATION);
+                    if (existingStatus.contains(user.getStatus())) {
                         throw new UserAlreadyExistsException(userRequest.email());
                     }
 
@@ -66,6 +68,16 @@ public class UserServiceImpl implements UserService {
 
                     return userMapper.toUserResponse(savedUser);
                 });
+    }
+
+    @Override
+    public void activateUser(Long id) {
+        var user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+
+        user.setStatus(UserStatus.ACTIVE);
+
+        userRepository.saveAndFlush(user);
     }
 
     @Override
