@@ -1,5 +1,7 @@
 package com.yurupari.user_service.utils;
 
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import com.yurupari.user_service.model.dto.UserDto;
 import com.yurupari.user_service.model.entity.User;
 import com.yurupari.user_service.model.enums.UserStatus;
@@ -48,6 +50,7 @@ public class TestModelFactory {
             String firstName,
             String lastName,
             UserStatus status,
+            String authUserId,
             Long version,
             Instant createdAt,
             Instant updatedAt
@@ -59,6 +62,7 @@ public class TestModelFactory {
                 .firstName(firstName)
                 .lastName(lastName)
                 .status(status)
+                .authUserId(authUserId)
                 .version(version)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
@@ -112,6 +116,32 @@ public class TestModelFactory {
                 .refreshToken(refreshToken)
                 .tokenType(tokenType)
                 .expiresIn(expiresIn)
+                .build();
+    }
+
+    public static RegisterUserEvent createRegisterUserEvent(
+            Long userId,
+            String email,
+            String password,
+            String firstName,
+            String lastName
+    ) {
+        return RegisterUserEvent.builder()
+                .userId(userId)
+                .email(email)
+                .password(password)
+                .firstName(firstName)
+                .lastName(lastName)
+                .build();
+    }
+
+    public static DeleteUserEvent createDeleteUserEvent(
+            Long userId,
+            String keycloakUserId
+    ) {
+        return DeleteUserEvent.builder()
+                .userId(userId)
+                .keycloakUserId(keycloakUserId)
                 .build();
     }
 }

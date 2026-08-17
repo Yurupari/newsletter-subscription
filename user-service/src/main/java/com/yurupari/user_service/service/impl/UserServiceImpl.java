@@ -3,7 +3,11 @@ package com.yurupari.user_service.service.impl;
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
 import com.yurupari.user_service.exception.UserNotFoundException;
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
+import com.yurupari.user_service.messaging.kafka.UserProducer;
 import com.yurupari.user_service.model.dto.UserDto;
+import com.yurupari.user_service.model.entity.User;
 import com.yurupari.user_service.model.enums.UserStatus;
 import com.yurupari.user_service.model.http.request.LoginRequest;
 import com.yurupari.user_service.model.http.request.UserRequest;
@@ -37,6 +41,8 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
+    private final UserProducer userProducer;
+
     private final UserMapper userMapper;
 
     @Override
@@ -45,39 +51,44 @@ public class UserServiceImpl implements UserService {
         log.info("Register user: email={}, firstName={}, lastName={}",
                 userRequest.email(), userRequest.firstName(), userRequest.lastName());
 
-        return userRepository.findByEmail(userRequest.email().toLowerCase())
+        var savedUser = userRepository.findByEmail(userRequest.email().toLowerCase())
                 .map(user -> {
-                    var existingStatus = List.of(UserStatus.ACTIVE, UserStatus.PENDING_ACTIVATION);
-                    if (existingStatus.contains(user.getStatus())) {
+                    var existingUserStatus = List.of(
+                            UserStatus.ACTIVE,
+                            UserStatus.PENDING_ACTIVATION,
+                            UserStatus.PENDING_DELETION
+                    );
+                    if (existingUserStatus.contains(user.getStatus())) {
                         throw new UserAlreadyExistsException(userRequest.email());
                     }
 
                     var userDto = buildUserDto(userRequest);
 
                     userMapper.updateEntityFromDto(userDto, user);
-                    user.setStatus(UserStatus.ACTIVE);
+                    user.setStatus(UserStatus.PENDING_ACTIVATION);
 
-                    var savedUser = userRepository.saveAndFlush(user);
-
-                    return userMapper.toUserResponse(savedUser);
+                    return userRepository.saveAndFlush(user);
                 })
                 .orElseGet(() -> {
                     var userDto = buildUserDto(userRequest);
 
-                    var savedUser = userRepository.saveAndFlush(userMapper.toEntity(userDto));
-
-                    return userMapper.toUserResponse(savedUser);
+                    return userRepository.saveAndFlush(userMapper.toEntity(userDto));
                 });
+
+        userProducer.produceRegisterUserEvent(userMapper.toRegisterUserEvent(savedUser));
+
+        return userMapper.toUserResponse(savedUser);
     }
 
     @Override
-    public void activateUser(Long id) {
-        var user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+    public void activateUser(RegisterUserEvent registerUserEvent) {
+        var id = registerUserEvent.userId();
+        log.info("Activate user: id={}", id);
 
-        user.setStatus(UserStatus.ACTIVE);
-
-        userRepository.saveAndFlush(user);
+        userRepository.findById(id).ifPresentOrElse(
+                user -> updateUserStatus(user, registerUserEvent),
+                () -> log.warn("User to activate does not exists: id={}", id)
+        );
     }
 
     @Override
@@ -157,9 +168,33 @@ public class UserServiceImpl implements UserService {
         userValidationService.validateUsers(id, formattedEmail, users);
         var user = users.getFirst();
 
-        user.setStatus(UserStatus.DELETED);
+        user.setStatus(UserStatus.PENDING_DELETION);
 
         userRepository.saveAndFlush(user);
+
+        userProducer.produceDeleteUserEvent(userMapper.toDeleteUserEvent(user));
+    }
+
+    @Override
+    public void deactivateUser(DeleteUserEvent deleteUserEvent) {
+        log.info("Deactivate user: userId={}", deleteUserEvent.userId());
+
+        userRepository.findById(deleteUserEvent.userId()).ifPresentOrElse(
+                user -> {
+                    if (UserStatus.PENDING_DELETION.equals(user.getStatus())) {
+                        authenticationService.deleteUser(deleteUserEvent);
+
+                        user.setStatus(UserStatus.DELETED);
+                        user.setAuthUserId(null);
+
+                        userRepository.saveAndFlush(user);
+                    } else {
+                        log.warn("User is not available to delete: id={}, status={}",
+                                user.getId(), user.getStatus());
+                    }
+                },
+                () -> log.warn("User to delete does not exists: id={}", deleteUserEvent.userId())
+        );
     }
 
     private UserDto buildUserDto(UserRequest userRequest) {
@@ -171,5 +206,28 @@ public class UserServiceImpl implements UserService {
                 .firstName(userRequest.firstName())
                 .lastName(userRequest.lastName())
                 .build();
+    }
+
+    private void updateUserStatus(User user, RegisterUserEvent registerUserEvent) {
+        var status = user.getStatus();
+        switch (status) {
+            case PENDING_ACTIVATION, FAILED_ACTIVATION, DELETED ->
+                    Optional.ofNullable(authenticationService.createUser(registerUserEvent))
+                            .ifPresentOrElse(
+                                    authUserId -> {
+                                        user.setStatus(UserStatus.ACTIVE);
+                                        user.setAuthUserId(authUserId);
+                                    },
+                                    () -> {
+                                        log.warn("User could not be activated. No User Key generated: id={}, status={}", user.getId(), status);
+                                        user.setStatus(UserStatus.FAILED_ACTIVATION);
+                                    });
+            default -> {
+                log.warn("User could not be activated: id={}, status={}", user.getId(), status);
+                user.setStatus(UserStatus.FAILED_ACTIVATION);
+            }
+        }
+
+        userRepository.saveAndFlush(user);
     }
 }

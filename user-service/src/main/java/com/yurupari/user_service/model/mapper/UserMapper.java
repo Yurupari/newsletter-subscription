@@ -1,6 +1,8 @@
 package com.yurupari.user_service.model.mapper;
 
 import com.yurupari.common_data.config.CentralMapperConfig;
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import com.yurupari.user_service.model.dto.UserDto;
 import com.yurupari.user_service.model.entity.User;
 import com.yurupari.user_service.model.http.request.UserUpdateRequest;
@@ -18,6 +20,13 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface UserMapper {
 
     UserDto toDto(User user);
+
+    @Mapping(target = "userId", source = "user.id")
+    RegisterUserEvent toRegisterUserEvent(User user);
+
+    @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "keycloakUserId", source = "user.authUserId")
+    DeleteUserEvent toDeleteUserEvent(User user);
 
     UserResponse toUserResponse(User user);
 

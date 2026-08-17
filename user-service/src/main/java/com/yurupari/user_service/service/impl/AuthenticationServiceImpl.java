@@ -1,6 +1,7 @@
 package com.yurupari.user_service.service.impl;
 
-import com.yurupari.common_data.kafka.event.RegisterUserEvent;
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import com.yurupari.user_service.client.KeycloakClient;
 import com.yurupari.user_service.model.dto.CredentialDto;
 import com.yurupari.user_service.model.http.request.KeycloakUserRepresentationRequest;
@@ -16,6 +17,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,33 +26,48 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final KeycloakClient keycloakClient;
 
-    private final UserService userService;
-
     @Value("${keycloak.realm}")
     private String realm;
 
     @Override
-    public void createUser(RegisterUserEvent registerUserEvent) {
-        var adminToken = "Bearer " + getAdminAccessToken();
+    public String createUser(RegisterUserEvent registerUserEvent) {
+        log.info("Create user in Keycloak: userId={}, email={}",
+                registerUserEvent.userId(), registerUserEvent.email());
 
-        var credential = CredentialDto.builder()
-                .type("password")
-                .value(registerUserEvent.password())
-                .temporary(false)
-                .build();
-        var keycloakUser = KeycloakUserRepresentationRequest.builder()
-                .username(registerUserEvent.email())
-                .email(registerUserEvent.email())
-                .enabled(true)
-                .emailVerified(true)
-                .firstName(registerUserEvent.firstName())
-                .lastName(registerUserEvent.lastName())
-                .credentials(List.of(credential))
-                .build();
+        try {
+            var adminToken = "Bearer " + getAdminAccessToken();
 
-        keycloakClient.createUser(realm, adminToken, keycloakUser);
+            var credential = CredentialDto.builder()
+                    .type("password")
+                    .value(registerUserEvent.password())
+                    .temporary(false)
+                    .build();
+            var keycloakUser = KeycloakUserRepresentationRequest.builder()
+                    .username(registerUserEvent.email())
+                    .email(registerUserEvent.email())
+                    .enabled(true)
+                    .emailVerified(true)
+                    .firstName(registerUserEvent.firstName())
+                    .lastName(registerUserEvent.lastName())
+                    .credentials(List.of(credential))
+                    .build();
 
-        userService.activateUser(registerUserEvent.userId());
+            var keycloakResponse = keycloakClient.createUser(realm, adminToken, keycloakUser);
+            return Optional.ofNullable(keycloakResponse.getHeaders().getLocation())
+                    .map(uri -> {
+                        var path = uri.getPath();
+
+                        return path.substring(path.lastIndexOf('/') + 1);
+                    })
+                    .orElseGet(() -> {
+                        log.error("Keycloak User ID could not be created: userId={}", registerUserEvent.userId());
+                        return null;
+                    });
+        } catch (Exception e) {
+            log.error("Error creating user in Keycloak: userId={}, error={}",
+                    registerUserEvent.userId(), e.getMessage());
+            return null;
+        }
     }
 
     @Override
@@ -65,11 +82,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return keycloakClient.authenticate(realm, formData);
     }
 
+    @Override
+    public void deleteUser(DeleteUserEvent deleteUserEvent) {
+        log.info("Delete user in Keycloak: userId={}", deleteUserEvent.userId());
+
+        try {
+            var adminToken = "Bearer " + getAdminAccessToken();
+
+            keycloakClient.deleteUser(realm, deleteUserEvent.keycloakUserId(), adminToken);
+        } catch(Exception e) {
+            log.error("Error deleting user in Keycloak: userId={}, error={}",
+                    deleteUserEvent.userId(), e.getMessage());
+        }
+    }
+
     private String getAdminAccessToken() {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "client_credentials");
 
-        AuthenticationResponse response = keycloakClient.authenticate(realm, formData);
-        return response.accessToken();
+        return Optional.ofNullable(keycloakClient.authenticate(realm, formData))
+                .map(AuthenticationResponse::accessToken)
+                .orElse(null);
     }
 }

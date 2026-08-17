@@ -9,6 +9,7 @@ import com.yurupari.user_service.service.EncryptionService;
 import com.yurupari.user_service.support.PostgreSQLTestcontainerBase;
 import com.yurupari.user_service.utils.JsonTestUtils;
 import com.yurupari.user_service.utils.TestModelFactory;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,17 +17,35 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.MessageListenerContainer;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+
 import static com.yurupari.user_service.utils.TestConstants.LOGIN_REQUEST_JSON;
 import static com.yurupari.user_service.utils.TestConstants.UPDATE_USER_REQUEST_JSON;
 import static com.yurupari.user_service.utils.TestConstants.USER_REQUEST_JSON;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,6 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @Testcontainers(disabledWithoutDocker = true)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@EmbeddedKafka(partitions = 1, topics = {"register-user", "delete-user"})
 @ActiveProfiles("test")
 class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 
@@ -55,6 +75,15 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	private KeycloakClient keycloakClient;
 
 	@Autowired
+	private KafkaTemplate<String, Object> kafkaTemplate;
+
+	@Autowired
+	private KafkaListenerEndpointRegistry registry;
+
+	@Autowired
+	private EmbeddedKafkaBroker embeddedKafkaBroker;
+
+	@Autowired
 	private JsonTestUtils jsonTestUtils;
 
 	@Autowired
@@ -65,6 +94,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		userRepository.deleteAll();
 
 		jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
+
+		for (MessageListenerContainer container : registry.getListenerContainers()) {
+			ContainerTestUtils.waitForAssignment(container, embeddedKafkaBroker.getPartitionsPerTopic());
+		}
 	}
 
 	@Test
@@ -98,8 +131,9 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"testLastName",
 				UserStatus.DELETED,
 				null,
-				null,
-				null
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		var requestJson = jsonTestUtils.loadRequest(USER_REQUEST_JSON);
@@ -125,9 +159,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"testName",
 				"testLastName",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		var requestJson = jsonTestUtils.loadRequest(USER_REQUEST_JSON);
@@ -147,9 +182,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(get("/api/v1/user")
@@ -170,9 +206,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(get("/api/v1/user")
@@ -206,9 +243,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 		userRepository.saveAndFlush(TestModelFactory.createUser(
 				null,
@@ -217,9 +255,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Erika",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId2",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(get("/api/v1/user")
@@ -237,9 +276,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 		var requestJson = jsonTestUtils.loadRequest(UPDATE_USER_REQUEST_JSON);
 
@@ -261,9 +301,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 		var requestJson = jsonTestUtils.loadRequest(UPDATE_USER_REQUEST_JSON);
 
@@ -306,9 +347,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		userRepository.saveAndFlush(TestModelFactory.createUser(
@@ -318,9 +360,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Erika",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId2",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 		var requestJson = jsonTestUtils.loadRequest(UPDATE_USER_REQUEST_JSON);
 
@@ -341,9 +384,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(delete("/api/v1/user")
@@ -360,9 +404,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(delete("/api/v1/user")
@@ -392,9 +437,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 		userRepository.saveAndFlush(TestModelFactory.createUser(
 				null,
@@ -403,9 +449,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Erika",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId2",
+				1L,
+				Instant.now(),
+				Instant.now()
 		));
 
 		mockMvc.perform(delete("/api/v1/user")
@@ -428,9 +475,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		);
 		userRepository.saveAndFlush(user);
 
@@ -474,9 +522,10 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"John",
 				"Doe",
 				UserStatus.ACTIVE,
-				null,
-				null,
-				null
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
 		);
 		userRepository.saveAndFlush(user);
 
@@ -484,5 +533,148 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestJson))
 				.andExpect(status().isUnauthorized());
+	}
+
+	// --------------- UserConsumer ---------------
+
+	@Test
+	void consumeRegisterUserEvent_Success() {
+		var user = TestModelFactory.createUser(
+				null,
+				"john.doe@email.com",
+				encryptionService.encrypt("password"),
+				"John",
+				"Doe",
+				UserStatus.PENDING_ACTIVATION,
+				null,
+				1L,
+				Instant.now(),
+				Instant.now()
+		);
+		var savedUser = userRepository.saveAndFlush(user);
+
+		var authenticationResponse = TestModelFactory.createAuthenticationResponse(
+				"accessToken",
+				"refreshToken",
+				"Bearer",
+				3600L
+		);
+		when(keycloakClient.authenticate(anyString(), any()))
+				.thenReturn(authenticationResponse);
+
+		var locationUri = URI.create("http://localhost:8091/admin/realms/ns-security-realm/users/3d7f9b2a-8c11-4b36-921d-93e18a8f1011");
+		ResponseEntity<Void> keycloakCreatedResponse = ResponseEntity.created(locationUri).build();
+		when(keycloakClient.createUser(anyString(), anyString(), any())).thenReturn(keycloakCreatedResponse);
+
+		var registerUserEvent = TestModelFactory.createRegisterUserEvent(
+				savedUser.getId(),
+				savedUser.getEmail(),
+				savedUser.getPassword(),
+				savedUser.getFirstName(),
+				savedUser.getLastName()
+		);
+		kafkaTemplate.send("register-user", registerUserEvent);
+
+		Awaitility.await()
+				.atMost(Duration.ofSeconds(5))
+				.untilAsserted(() -> {
+					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
+
+					assertNotNull(updatedUser);
+					assertEquals(UserStatus.ACTIVE, updatedUser.getStatus());
+					assertNotNull(updatedUser.getAuthUserId());
+				});
+
+		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, times(1)).createUser(anyString(), anyString(), any());
+	}
+
+	@Test
+	void consumeRegisterUserEvent_Fail_KeycloakClientThrowsException() {
+		var user = TestModelFactory.createUser(
+				null,
+				"john.doe@email.com",
+				encryptionService.encrypt("password"),
+				"John",
+				"Doe",
+				UserStatus.PENDING_ACTIVATION,
+				null,
+				1L,
+				Instant.now(),
+				Instant.now()
+		);
+		var savedUser = userRepository.saveAndFlush(user);
+
+		when(keycloakClient.authenticate(anyString(), any()))
+				.thenThrow(new RuntimeException("Keycloak client error"));
+
+		var registerUserEvent = TestModelFactory.createRegisterUserEvent(
+				savedUser.getId(),
+				savedUser.getEmail(),
+				savedUser.getPassword(),
+				savedUser.getFirstName(),
+				savedUser.getLastName()
+		);
+		kafkaTemplate.send("register-user", registerUserEvent);
+
+		Awaitility.await()
+				.atMost(Duration.ofSeconds(5))
+				.untilAsserted(() -> {
+					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
+
+					assertNotNull(updatedUser);
+					assertEquals(UserStatus.FAILED_ACTIVATION, updatedUser.getStatus());
+					assertNull(updatedUser.getAuthUserId());
+				});
+
+		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, never()).createUser(anyString(), anyString(), any());
+	}
+
+	@Test
+	void consumeDeleteUserEvent_Success() {
+		var user = TestModelFactory.createUser(
+				null,
+				"john.doe@email.com",
+				encryptionService.encrypt("password"),
+				"John",
+				"Doe",
+				UserStatus.PENDING_DELETION,
+				"authUserId",
+				1L,
+				Instant.now(),
+				Instant.now()
+		);
+		var savedUser = userRepository.saveAndFlush(user);
+
+		var authenticationResponse = TestModelFactory.createAuthenticationResponse(
+				"accessToken",
+				"refreshToken",
+				"Bearer",
+				3600L
+		);
+		when(keycloakClient.authenticate(anyString(), any()))
+				.thenReturn(authenticationResponse);
+
+		doNothing().when(keycloakClient).deleteUser(anyString(), anyString(), anyString());
+
+		var deleteUserEvent = TestModelFactory.createDeleteUserEvent(
+				savedUser.getId(),
+				savedUser.getAuthUserId()
+		);
+		kafkaTemplate.send("delete-user", deleteUserEvent);
+
+		Awaitility.await()
+				.atMost(Duration.ofSeconds(5))
+				.untilAsserted(() -> {
+					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
+
+					assertNotNull(updatedUser);
+					assertEquals(UserStatus.DELETED, updatedUser.getStatus());
+					assertNull(updatedUser.getAuthUserId());
+				});
+
+		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, times(1)).deleteUser(anyString(), anyString(), anyString());
 	}
 }

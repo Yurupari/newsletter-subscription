@@ -3,6 +3,9 @@ package com.yurupari.user_service.service.impl;
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
 import com.yurupari.user_service.exception.UserNotFoundException;
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
+import com.yurupari.user_service.messaging.kafka.UserProducer;
 import com.yurupari.user_service.model.entity.User;
 import com.yurupari.user_service.model.enums.UserStatus;
 import com.yurupari.user_service.model.http.request.LoginRequest;
@@ -30,11 +33,14 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,14 +62,19 @@ class UserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private UserProducer userProducer;
+
     @Spy
     private UserMapperImpl userMapper = new UserMapperImpl();
 
     private UserRequest userRequest;
     private LoginRequest loginRequest;
     private UserUpdateRequest userUpdateRequest;
-    private User user, deletedUser;
+    private User user, deletedUser, pendingActivationUser, pendingDeletionUser, failedActivationUser;
     private AuthenticationResponse authResponse;
+    private RegisterUserEvent registerUserEvent;
+    private DeleteUserEvent deleteUserEvent;
 
     @BeforeEach
     void setUp() {
@@ -71,8 +82,7 @@ class UserServiceImplTest {
                 "test@email.com",
                 "testPassword",
                 "testName",
-                "testLastName"
-        );
+                "testLastName");
 
         loginRequest = TestModelFactory.createLoginRequest(
                 "test@email.com",
@@ -99,6 +109,7 @@ class UserServiceImplTest {
                 "testName",
                 "testLastName",
                 UserStatus.ACTIVE,
+                "authUserId",
                 1L,
                 Instant.now(),
                 Instant.now()
@@ -111,9 +122,62 @@ class UserServiceImplTest {
                 "testName",
                 "testLastName",
                 UserStatus.DELETED,
+                null,
                 1L,
                 Instant.now(),
                 Instant.now()
+        );
+
+        pendingActivationUser = TestModelFactory.createUser(
+                1L,
+                "test@email.com",
+                "encryptedPassword",
+                "testName",
+                "testLastName",
+                UserStatus.PENDING_ACTIVATION,
+                null,
+                1L,
+                Instant.now(),
+                Instant.now()
+        );
+
+        pendingDeletionUser = TestModelFactory.createUser(
+                1L,
+                "test@email.com",
+                "encryptedPassword",
+                "testName",
+                "testLastName",
+                UserStatus.PENDING_DELETION,
+                "authUserId",
+                1L,
+                Instant.now(),
+                Instant.now()
+        );
+
+        failedActivationUser = TestModelFactory.createUser(
+                1L,
+                "test@email.com",
+                "encryptedPassword",
+                "testName",
+                "testLastName",
+                UserStatus.FAILED_ACTIVATION,
+                null,
+                1L,
+                Instant.now(),
+                Instant.now()
+        );
+
+        registerUserEvent = TestModelFactory.createRegisterUserEvent(
+                1L,
+                "test@email.com",
+                "testPassword",
+                "testName",
+                "testLastName"
+        );
+
+        deleteUserEvent = TestModelFactory.createDeleteUserEvent(
+                1L,
+                "authUserId"
         );
     }
 
@@ -121,9 +185,11 @@ class UserServiceImplTest {
     void registerUser_Success_UserDoNoExists() {
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(encryptionService.encrypt(anyString())).thenReturn("encryptedPassword");
-        when(userRepository.saveAndFlush(any())).thenReturn(user);
+        when(userRepository.saveAndFlush(any())).thenReturn(pendingActivationUser);
 
         var response = userService.registerUser(userRequest);
+
+        verify(userProducer, times(1)).produceRegisterUserEvent(any());
 
         assertNotNull(response);
         assertEquals(user.getId(), response.id());
@@ -136,9 +202,11 @@ class UserServiceImplTest {
     void registerUser_Success_UserAlreadyExistsButDeleted() {
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(deletedUser));
         when(encryptionService.encrypt(anyString())).thenReturn("encryptedPassword");
-        when(userRepository.saveAndFlush(any())).thenReturn(user);
+        when(userRepository.saveAndFlush(any())).thenReturn(pendingActivationUser);
 
         var response = userService.registerUser(userRequest);
+
+        verify(userProducer, times(1)).produceRegisterUserEvent(any());
 
         assertNotNull(response);
         assertEquals(user.getId(), response.id());
@@ -155,15 +223,99 @@ class UserServiceImplTest {
     }
 
     @Test
+    void registerUser_Fail_UserAlreadyExistsPendingActivation() {
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(pendingActivationUser));
+
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(userRequest));
+    }
+
+    @Test
+    void registerUser_Fail_UserAlreadyExistsPendingDeletion() {
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(pendingDeletionUser));
+
+        assertThrows(UserAlreadyExistsException.class, () -> userService.registerUser(userRequest));
+    }
+
+    @Test
+    void activateUser_Success_PendingActivation() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(pendingActivationUser));
+        when(authenticationService.createUser(any(RegisterUserEvent.class))).thenReturn("authUserId");
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, times(1)).createUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void activateUser_Success_FailedActivation() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(failedActivationUser));
+        when(authenticationService.createUser(any(RegisterUserEvent.class))).thenReturn("authUserId");
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, times(1)).createUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void activateUser_Success_Deleted() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(deletedUser));
+        when(authenticationService.createUser(any(RegisterUserEvent.class))).thenReturn("authUserId");
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, times(1)).createUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void activateUser_Fail_UserNotFound() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, never()).createUser(any());
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void activateUser_Fail_AuthServiceCreateUserReturnsNull() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(pendingActivationUser));
+        when(authenticationService.createUser(any())).thenReturn(null);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(pendingActivationUser);
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, times(1)).createUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void activateUser_Fail_UserAlreadyActive() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
+
+        userService.activateUser(registerUserEvent);
+
+        verify(authenticationService, never()).createUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
     void login_Success() {
         when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(user));
         when(authenticationService.authenticate(loginRequest)).thenReturn(authResponse);
 
         var response = userService.login(loginRequest);
 
+        verify(userValidationService, times(1)).validateUser(anyString(), anyString());
+
         assertNotNull(response);
         assertEquals(authResponse.accessToken(), response.accessToken());
-        verify(userValidationService).validateUser(user.getPassword(), loginRequest.password());
     }
 
     @Test
@@ -195,9 +347,10 @@ class UserServiceImplTest {
 
         var response = userService.getUser(user.getId(), user.getEmail());
 
+        verify(userValidationService).validateUserIdAndEmail(user.getId(), user.getEmail());
+
         assertNotNull(response);
         assertEquals(user.getEmail(), response.email());
-        verify(userValidationService).validateUserIdAndEmail(user.getId(), user.getEmail());
     }
 
     @Test
@@ -206,9 +359,10 @@ class UserServiceImplTest {
 
         var response = userService.getUser(user.getId(), null);
 
+        verify(userValidationService).validateUserIdAndEmail(user.getId(), null);
+
         assertNotNull(response);
         assertEquals(user.getEmail(), response.email());
-        verify(userValidationService).validateUserIdAndEmail(user.getId(), null);
     }
 
     @Test
@@ -238,10 +392,11 @@ class UserServiceImplTest {
 
         var response = userService.updateUser(user.getId(), user.getEmail(), userUpdateRequest);
 
+        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
+
         assertNotNull(response);
         assertEquals(userUpdateRequest.firstName(), response.firstName());
         assertEquals(userUpdateRequest.lastName(), response.lastName());
-        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
     }
 
     @Test
@@ -251,10 +406,11 @@ class UserServiceImplTest {
 
         var response = userService.updateUser(user.getId(), null, userUpdateRequest);
 
+        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
+
         assertNotNull(response);
         assertEquals(userUpdateRequest.firstName(), response.firstName());
         assertEquals(userUpdateRequest.lastName(), response.lastName());
-        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
     }
 
     @Test
@@ -273,18 +429,19 @@ class UserServiceImplTest {
 
         userService.deleteUser(user.getId(), user.getEmail());
 
-        assertEquals(UserStatus.DELETED, user.getStatus());
-        verify(userRepository).saveAndFlush(user);
+        verify(userProducer, times(1)).produceDeleteUserEvent(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
     }
 
     @Test
     void deleteUser_Success_WithNullEmail() {
         when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(List.of(user));
+        when(userRepository.saveAndFlush(any())).thenReturn(pendingDeletionUser);
 
         userService.deleteUser(user.getId(), null);
 
-        assertEquals(UserStatus.DELETED, user.getStatus());
-        verify(userRepository).saveAndFlush(user);
+        verify(userProducer, times(1)).produceDeleteUserEvent(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
     }
 
     @Test
@@ -295,5 +452,36 @@ class UserServiceImplTest {
                 .validateUsers(anyLong(), anyString(), any());
 
         assertThrows(UserNotFoundException.class, () -> userService.deleteUser(user.getId(), user.getEmail()));
+    }
+
+    @Test
+    void deactivateUser_Success() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(pendingDeletionUser));
+        when(userRepository.saveAndFlush(any())).thenReturn(deletedUser);
+
+        userService.deactivateUser(deleteUserEvent);
+
+        verify(authenticationService, times(1)).deleteUser(any());
+        verify(userRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void deactivateUser_Fail_UserNotFound() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        userService.deactivateUser(deleteUserEvent);
+
+        verify(authenticationService, never()).deleteUser(any());
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void deactivateUser_Fail_UserNotPendingDeletion() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
+
+        userService.deactivateUser(deleteUserEvent);
+
+        verify(authenticationService, never()).deleteUser(any());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 }

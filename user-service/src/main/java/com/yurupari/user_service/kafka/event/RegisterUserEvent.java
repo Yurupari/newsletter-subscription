@@ -1,4 +1,4 @@
-package com.yurupari.common_data.kafka.event;
+package com.yurupari.user_service.kafka.event;
 
 import lombok.Builder;
 

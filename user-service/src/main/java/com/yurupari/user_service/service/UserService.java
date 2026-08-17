@@ -1,5 +1,7 @@
 package com.yurupari.user_service.service;
 
+import com.yurupari.user_service.kafka.event.DeleteUserEvent;
+import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import com.yurupari.user_service.model.http.request.LoginRequest;
 import com.yurupari.user_service.model.http.request.UserRequest;
 import com.yurupari.user_service.model.http.request.UserUpdateRequest;
@@ -10,7 +12,7 @@ public interface UserService {
 
     UserResponse registerUser(UserRequest userRequest);
 
-    void activateUser(Long id);
+    void activateUser(RegisterUserEvent registerUserEvent);
 
     AuthenticationResponse login(LoginRequest loginRequest);
 
@@ -19,4 +21,6 @@ public interface UserService {
     UserResponse updateUser(Long id, String email, UserUpdateRequest updateRequest);
 
     void deleteUser(Long id, String email);
+
+    void deactivateUser(DeleteUserEvent deleteUserEvent);
 }

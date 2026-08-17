@@ -4,10 +4,12 @@ import com.yurupari.user_service.model.http.request.KeycloakUserRepresentationRe
 import com.yurupari.user_service.model.http.response.AuthenticationResponse;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.service.annotation.DeleteExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 
@@ -21,7 +23,7 @@ public interface KeycloakClient {
             url = "/admin/realms/{realm}/users",
             contentType = MediaType.APPLICATION_JSON_VALUE
     )
-    void createUser(
+    ResponseEntity<Void> createUser(
             @PathVariable("realm") String realm,
             @RequestHeader("Authorization") String adminBearerToken,
             @RequestBody KeycloakUserRepresentationRequest user
@@ -35,5 +37,12 @@ public interface KeycloakClient {
     AuthenticationResponse authenticate(
             @PathVariable("realm") String realm,
             @RequestBody MultiValueMap<String, String> formData
+    );
+
+    @DeleteExchange(url = "/admin/realms/{realm}/users/{keycloakUserId}")
+    void deleteUser(
+            @PathVariable("realm") String realm,
+            @PathVariable("keycloakUserId") String keycloakUserId,
+            @RequestHeader("Authorization") String adminBearerToken
     );
 }

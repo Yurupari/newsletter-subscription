@@ -41,4 +41,6 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private UserStatus status = UserStatus.PENDING_ACTIVATION;
+
+    private String authUserId;
 }
