@@ -30,11 +30,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Value("${keycloak.realm}")
     private String realm;
 
-    @Value("${keycloak.client-id}")
-    private String clientId;
-
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
+    @Value("${keycloak.credential}")
+    private String credential;
 
     @Override
     public String createUser(RegisterUserEvent registerUserEvent) {
@@ -81,15 +78,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public AuthenticationResponse authenticate(LoginRequest loginRequest) {
-        log.info("Authenticating user: email={}", loginRequest.email());
+    public AuthenticationResponse authenticate(String email, String encryptedPassword) {
+        log.info("Authenticating user: email={}", email);
 
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "password");
-        formData.add("username", loginRequest.email());
-        formData.add("password", loginRequest.password());
+        formData.add("username", email);
+        formData.add("password", encryptedPassword);
 
-        return keycloakClient.authenticateUser(realm, formData);
+        var basicAuthHeader = getBasicAuthHeader();
+
+        return keycloakClient.authenticateUser(realm, basicAuthHeader, formData);
     }
 
     @Override
@@ -112,11 +111,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "client_credentials");
 
-        var basicAuthHeader = "Basic " + Base64.getEncoder()
-                .encodeToString((clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
+        var basicAuthHeader = getBasicAuthHeader();
 
         return Optional.ofNullable(keycloakClient.authenticateClient(realm, basicAuthHeader, formData))
                 .map(AuthenticationResponse::accessToken)
                 .orElse(null);
+    }
+
+    private String getBasicAuthHeader() {
+        return "Basic " + Base64.getEncoder()
+                .encodeToString(credential.getBytes(StandardCharsets.UTF_8));
     }
 }

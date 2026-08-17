@@ -488,9 +488,9 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Bearer",
 				3600L
 		);
-		when(keycloakClient.authenticateUser(anyString(), any())).thenReturn(authenticationResponse);
+		when(keycloakClient.authenticateUser(anyString(), anyString(), any())).thenReturn(authenticationResponse);
 
-		mockMvc.perform(post("/api/v1/auth/login")
+		mockMvc.perform(post("/api/v1/user/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestJson))
 				.andExpect(status().isOk())
@@ -504,7 +504,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	void login_Fail_UserNotFound_Unauthorized() throws Exception {
 		var requestJson = jsonTestUtils.loadRequest(LOGIN_REQUEST_JSON);
 
-		mockMvc.perform(post("/api/v1/auth/login")
+		mockMvc.perform(post("/api/v1/user/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestJson))
 				.andExpect(status().isUnauthorized());
@@ -529,7 +529,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		);
 		userRepository.saveAndFlush(user);
 
-		mockMvc.perform(post("/api/v1/auth/login")
+		mockMvc.perform(post("/api/v1/user/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestJson))
 				.andExpect(status().isUnauthorized());

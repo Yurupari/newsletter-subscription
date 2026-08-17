@@ -44,8 +44,7 @@ class AuthenticationServiceImplTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(authService, "realm", "realm");
-        ReflectionTestUtils.setField(authService, "clientId", "clientId");
-        ReflectionTestUtils.setField(authService, "clientSecret", "clientSecret");
+        ReflectionTestUtils.setField(authService, "credential", "credential");
 
         registerUserEvent = TestModelFactory.createRegisterUserEvent(
                 1L,
@@ -118,10 +117,9 @@ class AuthenticationServiceImplTest {
 
     @Test
     void authenticate_Success() {
-        var loginRequest = TestModelFactory.createLoginRequest("test@email.com", "testPassword");
-        when(keycloakClient.authenticateUser(anyString(), any())).thenReturn(authenticationResponse);
+        when(keycloakClient.authenticateUser(anyString(), anyString(), any())).thenReturn(authenticationResponse);
 
-        var response = authService.authenticate(loginRequest);
+        var response = authService.authenticate("test@email.com", "testPassword");
 
         assertNotNull(response);
         assertEquals("accessToken", response.accessToken());
@@ -129,15 +127,10 @@ class AuthenticationServiceImplTest {
 
     @Test
     void authenticate_KeycloakClientThrowsException_ShouldPropagate() {
-        var loginRequest = TestModelFactory.createLoginRequest(
-                "test@email.com",
-                "wrongPassword"
-        );
-
-        when(keycloakClient.authenticateUser(anyString(), any())).thenThrow(new RuntimeException("Keycloak error"));
+        when(keycloakClient.authenticateUser(anyString(), anyString(), any())).thenThrow(new RuntimeException("Keycloak error"));
 
         assertThrows(RuntimeException.class, () -> {
-            authService.authenticate(loginRequest);
+            authService.authenticate("test@email.com", "wrongPassword");
         });
     }
 

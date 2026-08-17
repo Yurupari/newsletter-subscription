@@ -34,6 +34,7 @@ public interface KeycloakClient {
     )
     AuthenticationResponse authenticateUser(
             @PathVariable("realm") String realm,
+            @RequestHeader("Authorization") String authorization,
             @RequestBody MultiValueMap<String, String> formData
     );
 

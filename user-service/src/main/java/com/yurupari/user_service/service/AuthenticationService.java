@@ -9,7 +9,7 @@ public interface AuthenticationService {
 
     String createUser(RegisterUserEvent registerUserEvent);
 
-    AuthenticationResponse authenticate(LoginRequest loginRequest);
+    AuthenticationResponse authenticate(String email, String encryptedPassword);
 
     void deleteUser(DeleteUserEvent deleteUserEvent);
 }

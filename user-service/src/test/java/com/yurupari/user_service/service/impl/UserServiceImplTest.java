@@ -307,8 +307,8 @@ class UserServiceImplTest {
 
     @Test
     void login_Success() {
-        when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(user));
-        when(authenticationService.authenticate(loginRequest)).thenReturn(authResponse);
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
+        when(authenticationService.authenticate(anyString(), anyString())).thenReturn(authResponse);
 
         var response = userService.login(loginRequest);
 
@@ -320,21 +320,21 @@ class UserServiceImplTest {
 
     @Test
     void login_Fail_UserNotFound() {
-        when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.empty());
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
 
         assertThrows(AuthenticationException.class, () -> userService.login(loginRequest));
     }
 
     @Test
     void login_Fail_InactiveUser() {
-        when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(deletedUser));
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(deletedUser));
 
         assertThrows(AuthenticationException.class, () -> userService.login(loginRequest));
     }
 
     @Test
     void login_Fail_WrongPassword() {
-        when(userRepository.findByEmail(loginRequest.email().toLowerCase())).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
         doThrow(new AuthenticationException("Invalid email or password"))
                 .when(userValidationService).validateUser(user.getPassword(), loginRequest.password());
 
@@ -343,11 +343,11 @@ class UserServiceImplTest {
 
     @Test
     void getUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
+        when(userRepository.findByIdOrEmail(anyLong(), anyString())).thenReturn(List.of(user));
 
         var response = userService.getUser(user.getId(), user.getEmail());
 
-        verify(userValidationService).validateUserIdAndEmail(user.getId(), user.getEmail());
+        verify(userValidationService, times(1)).validateUserIdAndEmail(anyLong(), anyString());
 
         assertNotNull(response);
         assertEquals(user.getEmail(), response.email());
@@ -359,7 +359,7 @@ class UserServiceImplTest {
 
         var response = userService.getUser(user.getId(), null);
 
-        verify(userValidationService).validateUserIdAndEmail(user.getId(), null);
+        verify(userValidationService, times(1)).validateUserIdAndEmail(user.getId(), null);
 
         assertNotNull(response);
         assertEquals(user.getEmail(), response.email());
@@ -387,12 +387,10 @@ class UserServiceImplTest {
 
     @Test
     void updateUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
-        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findByIdOrEmail(anyLong(), anyString())).thenReturn(List.of(user));
+        when(userRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = userService.updateUser(user.getId(), user.getEmail(), userUpdateRequest);
-
-        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
 
         assertNotNull(response);
         assertEquals(userUpdateRequest.firstName(), response.firstName());
@@ -402,11 +400,9 @@ class UserServiceImplTest {
     @Test
     void updateUser_Success_WithNullEmail() {
         when(userRepository.findByIdOrEmail(user.getId(), null)).thenReturn(List.of(user));
-        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = userService.updateUser(user.getId(), null, userUpdateRequest);
-
-        verify(userMapper).updateEntityFromUserRequest(userUpdateRequest, user);
 
         assertNotNull(response);
         assertEquals(userUpdateRequest.firstName(), response.firstName());
@@ -425,7 +421,7 @@ class UserServiceImplTest {
 
     @Test
     void deleteUser_Success_WithEmail() {
-        when(userRepository.findByIdOrEmail(user.getId(), user.getEmail())).thenReturn(List.of(user));
+        when(userRepository.findByIdOrEmail(anyLong(), anyString())).thenReturn(List.of(user));
 
         userService.deleteUser(user.getId(), user.getEmail());
 

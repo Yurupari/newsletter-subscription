@@ -102,7 +102,7 @@ public class UserServiceImpl implements UserService {
 
         userValidationService.validateUser(user.getPassword(), loginRequest.password());
 
-        return authenticationService.authenticate(loginRequest);
+        return authenticationService.authenticate(email, user.getPassword());
     }
 
     @Override

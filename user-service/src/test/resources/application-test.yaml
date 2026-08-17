@@ -32,5 +32,4 @@ encryption:
 keycloak:
   auth-server-url: http://localhost:9090
   realm: test-realm
-  client-id: test-client-id
-  client-secret: test-client-secret
+  credential: test-client-id:test-client-secret
