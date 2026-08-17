@@ -1,4 +1,4 @@
-package com.yurupari.user_service.support;
+package com.yurupari.newsletter_service.support;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.junit.jupiter.Container;
