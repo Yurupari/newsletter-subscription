@@ -56,7 +56,8 @@ public class NewsletterControllerV1 {
 
     @Operation(summary = "Initiates subscription for an user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription initiated for an user")
+            @ApiResponse(responseCode = "200", description = "Subscription initiated for an user"),
+            @ApiResponse(responseCode = "400", description = "At least one parameter must be provided")
     })
     @PostMapping("/user/{userId}/subscription")
     public ResponseEntity<SubscriptionResponse> subscribe(
