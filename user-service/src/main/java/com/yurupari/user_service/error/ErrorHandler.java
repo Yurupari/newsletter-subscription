@@ -1,5 +1,6 @@
 package com.yurupari.user_service.error;
 
+import com.yurupari.common_data.error.BaseErrorHandler;
 import com.yurupari.common_data.model.http.ErrorResponse;
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.KeycloakClientException;
@@ -11,11 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.time.OffsetDateTime;
-
 @ControllerAdvice
 @Slf4j
-public class ErrorHandler {
+public class ErrorHandler extends BaseErrorHandler {
 
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleUserNotFoundException(UserNotFoundException e) {
@@ -45,21 +44,5 @@ public class ErrorHandler {
     public ResponseEntity<ErrorResponse> handleKeycloakClientException(KeycloakClientException e) {
         var errorResponse = buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
         return new ResponseEntity<>(errorResponse, errorResponse.httpStatus());
-    }
-
-    @ExceptionHandler
-    public ResponseEntity<ErrorResponse> handleException(Exception e) {
-        var errorResponse = buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        return new ResponseEntity<>(errorResponse, errorResponse.httpStatus());
-    }
-
-    private ErrorResponse buildErrorResponse(HttpStatus httpStatus, String message) {
-        log.error(message);
-
-        return ErrorResponse.builder()
-                .httpStatus(httpStatus)
-                .timestamp(OffsetDateTime.now())
-                .message(message)
-                .build();
     }
 }
