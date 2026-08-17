@@ -58,9 +58,9 @@ Your task is to provide a high level overview of the interacting systems/compone
 
 ### Requirement
 
-The starting point is a platform where users are able to register, update and delete their accounts. Within these accounts the user can subscribe, unsubscribe to several  different newsletters (please note that every newsletter subscription is only valid after a  double opt-in).
+The starting point is a platform where users are able to register, update and delete their accounts. Within these accounts the user can subscribe, unsubscribe to several different newsletters (please note that every newsletter subscription is only valid after a double opt-in).
 
-The user data should be forwarded to a CDP directly or indirectly to the API of the CDP (no direct connection between the database of the platform and the CDP is possible,  due to security reasons) which then forwards updates to an external email marketing  service if needed.
+The user data should be forwarded to a CDP directly or indirectly to the API of the CDP (no direct connection between the database of the platform and the CDP is possible, due to security reasons) which then forwards updates to an external email marketing service if needed.
 
 Make sure that the designed system is scalable and resilient against the most common  error cases like:
 
