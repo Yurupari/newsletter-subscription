@@ -13,8 +13,6 @@ import org.springframework.web.service.annotation.DeleteExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 
-import java.net.URI;
-
 @HttpExchange(accept = {MediaType.APPLICATION_JSON_VALUE})
 public interface KeycloakClient {
 
@@ -34,8 +32,19 @@ public interface KeycloakClient {
             url = "/realms/{realm}/protocol/openid-connect/token",
             contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
-    AuthenticationResponse authenticate(
+    AuthenticationResponse authenticateUser(
             @PathVariable("realm") String realm,
+            @RequestBody MultiValueMap<String, String> formData
+    );
+
+    @Retry(name = "keycloakAuth")
+    @PostExchange(
+            url = "/realms/{realm}/protocol/openid-connect/token",
+            contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE
+    )
+    AuthenticationResponse authenticateClient(
+            @PathVariable("realm") String realm,
+            @RequestHeader("Authorization") String authorization,
             @RequestBody MultiValueMap<String, String> formData
     );
 

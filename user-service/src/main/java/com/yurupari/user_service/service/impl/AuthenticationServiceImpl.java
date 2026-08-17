@@ -8,7 +8,6 @@ import com.yurupari.user_service.model.http.request.KeycloakUserRepresentationRe
 import com.yurupari.user_service.model.http.request.LoginRequest;
 import com.yurupari.user_service.model.http.response.AuthenticationResponse;
 import com.yurupari.user_service.service.AuthenticationService;
-import com.yurupari.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${keycloak.realm}")
     private String realm;
+
+    @Value("${keycloak.client-id}")
+    private String clientId;
+
+    @Value("${keycloak.client-secret}")
+    private String clientSecret;
 
     @Override
     public String createUser(RegisterUserEvent registerUserEvent) {
@@ -52,7 +59,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .credentials(List.of(credential))
                     .build();
 
+            log.info("Attempting to create user in Keycloak: userId={}, email={}",
+                    registerUserEvent.userId(), registerUserEvent.email());
             var keycloakResponse = keycloakClient.createUser(realm, adminToken, keycloakUser);
+
             return Optional.ofNullable(keycloakResponse.getHeaders().getLocation())
                     .map(uri -> {
                         var path = uri.getPath();
@@ -79,12 +89,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         formData.add("username", loginRequest.email());
         formData.add("password", loginRequest.password());
 
-        return keycloakClient.authenticate(realm, formData);
+        return keycloakClient.authenticateUser(realm, formData);
     }
 
     @Override
     public void deleteUser(DeleteUserEvent deleteUserEvent) {
-        log.info("Delete user in Keycloak: userId={}", deleteUserEvent.userId());
+        log.info("Deleting user in Keycloak: userId={}", deleteUserEvent.userId());
 
         try {
             var adminToken = "Bearer " + getAdminAccessToken();
@@ -97,10 +107,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     private String getAdminAccessToken() {
+        log.info("Attempting to get admin access token...");
+
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "client_credentials");
 
-        return Optional.ofNullable(keycloakClient.authenticate(realm, formData))
+        var basicAuthHeader = "Basic " + Base64.getEncoder()
+                .encodeToString((clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
+
+        return Optional.ofNullable(keycloakClient.authenticateClient(realm, basicAuthHeader, formData))
                 .map(AuthenticationResponse::accessToken)
                 .orElse(null);
     }

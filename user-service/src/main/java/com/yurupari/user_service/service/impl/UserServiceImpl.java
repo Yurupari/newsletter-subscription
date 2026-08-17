@@ -2,7 +2,6 @@ package com.yurupari.user_service.service.impl;
 
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.UserAlreadyExistsException;
-import com.yurupari.user_service.exception.UserNotFoundException;
 import com.yurupari.user_service.kafka.event.DeleteUserEvent;
 import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import com.yurupari.user_service.messaging.kafka.UserProducer;

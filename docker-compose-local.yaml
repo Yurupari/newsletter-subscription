@@ -97,7 +97,9 @@ services:
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=ns-security-realm
       - KEYCLOAK_CLIENT_ID=newsletter-subscription-client
-      - KEYCLOAK_CLIENT_SECRET=l1LujrpMLKWggwHICAcAqnvWNKBB8NaF
+      - KEYCLOAK_CLIENT_SECRET=sVzk1W8v6hv3qf76K2XGqcy3vmKR59kb
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
     volumes:
       - ./logs/:/logs
     ports:
@@ -105,6 +107,7 @@ services:
     depends_on:
       - postgres
       - keycloak
+      - kafka
 
   api-gateway:
     build:

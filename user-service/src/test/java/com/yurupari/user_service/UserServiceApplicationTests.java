@@ -488,7 +488,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Bearer",
 				3600L
 		);
-		when(keycloakClient.authenticate(anyString(), any())).thenReturn(authenticationResponse);
+		when(keycloakClient.authenticateUser(anyString(), any())).thenReturn(authenticationResponse);
 
 		mockMvc.perform(post("/api/v1/auth/login")
 						.contentType(MediaType.APPLICATION_JSON)
@@ -559,7 +559,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Bearer",
 				3600L
 		);
-		when(keycloakClient.authenticate(anyString(), any()))
+		when(keycloakClient.authenticateClient(anyString(), anyString(), any()))
 				.thenReturn(authenticationResponse);
 
 		var locationUri = URI.create("http://localhost:8091/admin/realms/ns-security-realm/users/3d7f9b2a-8c11-4b36-921d-93e18a8f1011");
@@ -585,7 +585,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 					assertNotNull(updatedUser.getAuthUserId());
 				});
 
-		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, times(1)).authenticateClient(anyString(), anyString(), any());
 		verify(keycloakClient, times(1)).createUser(anyString(), anyString(), any());
 	}
 
@@ -605,7 +605,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		);
 		var savedUser = userRepository.saveAndFlush(user);
 
-		when(keycloakClient.authenticate(anyString(), any()))
+		when(keycloakClient.authenticateClient(anyString(), anyString(), any()))
 				.thenThrow(new RuntimeException("Keycloak client error"));
 
 		var registerUserEvent = TestModelFactory.createRegisterUserEvent(
@@ -627,7 +627,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 					assertNull(updatedUser.getAuthUserId());
 				});
 
-		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, times(1)).authenticateClient(anyString(), anyString(), any());
 		verify(keycloakClient, never()).createUser(anyString(), anyString(), any());
 	}
 
@@ -653,7 +653,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				"Bearer",
 				3600L
 		);
-		when(keycloakClient.authenticate(anyString(), any()))
+		when(keycloakClient.authenticateClient(anyString(), anyString(), any()))
 				.thenReturn(authenticationResponse);
 
 		doNothing().when(keycloakClient).deleteUser(anyString(), anyString(), anyString());
@@ -674,7 +674,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 					assertNull(updatedUser.getAuthUserId());
 				});
 
-		verify(keycloakClient, times(1)).authenticate(anyString(), any());
+		verify(keycloakClient, times(1)).authenticateClient(anyString(), anyString(), any());
 		verify(keycloakClient, times(1)).deleteUser(anyString(), anyString(), anyString());
 	}
 }
