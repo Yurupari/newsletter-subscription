@@ -2,6 +2,8 @@ package com.yurupari.newsletter_service.service.impl;
 
 import com.yurupari.newsletter_service.model.http.request.SubscriptionRequest;
 import com.yurupari.newsletter_service.model.http.response.SubscriptionResponse;
+import com.yurupari.newsletter_service.model.mapper.UserSubscriptionMapper;
+import com.yurupari.newsletter_service.repository.UserSubscriptionRepository;
 import com.yurupari.newsletter_service.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,10 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class SubscriptionServiceImpl implements SubscriptionService {
+
+    private final UserSubscriptionRepository userSubscriptionRepository;
+
+    private final UserSubscriptionMapper userSubscriptionMapper;
 
     @Override
     public List<SubscriptionResponse> getSubscriptions(Long userId) {
