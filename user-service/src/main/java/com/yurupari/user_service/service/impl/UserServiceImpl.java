@@ -80,6 +80,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void activateUser(RegisterUserEvent registerUserEvent) {
         var id = registerUserEvent.userId();
         log.info("Activate user: id={}", id);
@@ -175,6 +176,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deactivateUser(DeleteUserEvent deleteUserEvent) {
         log.info("Deactivate user: userId={}", deleteUserEvent.userId());
 
