@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-trixie
-    container_name: newsletter-subscription-postgres
+    container_name: ns-postgres
     restart: always
     environment:
       - POSTGRES_DB=newsletter_subscription
@@ -16,7 +16,7 @@ services:
 
   keycloak-db:
     image: postgres:17-trixie
-    container_name: newsletter-subscription-keycloak-postgres
+    container_name: ns-keycloak-postgres
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=keycloak
@@ -26,7 +26,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
-    container_name: newsletter-subscription-keycloak
+    container_name: ns-keycloak
     command: [ "start-dev", "--import-realm" ]
     environment:
       - KC_DB=postgres
@@ -44,7 +44,7 @@ services:
 
   kafka:
     image: apache/kafka:latest
-    container_name: newsletter-subscription-kafka
+    container_name: ns-kafka
     restart: always
     environment:
       - KAFKA_NODE_ID=1
@@ -70,7 +70,7 @@ services:
 
   kafka-ui:
     image: ghcr.io/kafbat/kafka-ui:latest
-    container_name: newsletter-subscription-kafka-ui
+    container_name: ns-kafka-ui
     restart: unless-stopped
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
@@ -81,11 +81,22 @@ services:
     depends_on:
       - kafka
 
+  wiremock:
+    image: wiremock/wiremock:latest
+    container_name: ns-wiremock
+    command:
+      - "--global-response-templating"
+      - "--verbose"
+    ports:
+      - "8443:8080"
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings
+
   user-service:
     build:
       context: .
       dockerfile: ./user-service/src/main/docker/Dockerfile
-    container_name: newsletter-subscription-user-service
+    container_name: ns-user-service
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -97,7 +108,7 @@ services:
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=ns-security-realm
       - KEYCLOAK_CLIENT_ID=newsletter-subscription-client
-      - KEYCLOAK_CLIENT_SECRET=sVzk1W8v6hv3qf76K2XGqcy3vmKR59kb
+      - KEYCLOAK_CLIENT_SECRET=mM7dYSCd1jLZqry8PRtgPKLw3TijszQA
       - KAFKA_SERVER=kafka
       - KAFKA_EXTERNAL_PORT=9092
     volumes:
@@ -113,7 +124,7 @@ services:
     build:
       context: .
       dockerfile: ./subscription-service/src/main/docker/Dockerfile
-    container_name: newsletter-subscription-subscription-service
+    container_name: ns-subscription-service
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -136,7 +147,7 @@ services:
     build:
       context: .
       dockerfile: ./api-gateway/src/main/docker/Dockerfile
-    container_name: newsletter-subscription-api-gateway
+    container_name: ns-api-gateway
     environment:
       - USER_SERVICE_URL=http://user-service:8080
       - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8081
@@ -148,6 +159,27 @@ services:
       - "9000:9000"
     depends_on:
       - keycloak
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/src/main/docker/Dockerfile
+    container_name: ns-notification-service
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8081
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+      - EMAIL_SERVICE_URL=http://wiremock:8080
+      - MAIL_HOST=
+      - MAIL_PORT=
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "8082:8082"
+    depends_on:
+      - kafka
+      - wiremock
 
 volumes:
   db-data:

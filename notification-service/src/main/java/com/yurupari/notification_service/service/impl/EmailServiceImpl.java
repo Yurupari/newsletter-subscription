@@ -21,6 +21,8 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendEmail(String to, String subject, String body) {
+        log.info("Sending email: to={}, subject={}", to, subject);
+
         var message = buildMessage(to, subject, body);
 
         try {

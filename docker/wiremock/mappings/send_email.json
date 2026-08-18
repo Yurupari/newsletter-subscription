@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/v1/emails/send"
+  },
+  "response": {
+    "status": "202",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "QUEUED"
+    }
+  },
+  "serveEventListeners": [
+    {
+      "name": "webhook",
+      "parameters": {
+        "method": "POST",
+        "url": "http://subscription-service:8081/api/v1/subscription/confirm?token={{regexExtract (jsonPath originalRequest.body '$.body') '[a-f0-9\\-]{36}'}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}

@@ -62,6 +62,8 @@ services:
     url: ${USER_SERVICE_URL}
 
 email:
+  service:
+    url: ${EMAIL_SERVICE_URL}
   from: noreply@yurupari.com
   confirmation-subscription:
     subject: Confirm Subscription
