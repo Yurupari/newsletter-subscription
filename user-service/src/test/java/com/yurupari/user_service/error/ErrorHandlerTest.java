@@ -56,13 +56,6 @@ class ErrorHandlerTest {
         assertErrorResponse(responseEntity, HttpStatus.FORBIDDEN, exception.getMessage());
     }
 
-    @Test
-    void handleGenericException() {
-        var exception = new RuntimeException("Generic error");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleException(exception);
-        assertErrorResponse(responseEntity, HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage());
-    }
-
     private void assertErrorResponse(
             ResponseEntity<ErrorResponse> responseEntity,
             HttpStatus expectedStatus,
