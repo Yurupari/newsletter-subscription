@@ -31,6 +31,9 @@ spring:
     bootstrap-servers: ${KAFKA_SERVER}:${KAFKA_EXTERNAL_PORT}
     template:
       default-topic: register-user
+    topics:
+      register-user: register-user
+      delete-user: delete-user
     consumer:
       group-id: user-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer

@@ -1,6 +1,7 @@
 package com.yurupari.user_service.error;
 
 import com.yurupari.common_data.error.BaseErrorHandler;
+import com.yurupari.common_data.exception.ApiServerException;
 import com.yurupari.common_data.model.http.ErrorResponse;
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.KeycloakClientException;
@@ -43,6 +44,12 @@ public class ErrorHandler extends BaseErrorHandler {
     @ExceptionHandler
     public ResponseEntity<ErrorResponse> handleKeycloakClientException(KeycloakClientException e) {
         var errorResponse = buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
+        return new ResponseEntity<>(errorResponse, errorResponse.httpStatus());
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleApiServerException(ApiServerException e) {
+        var errorResponse = buildErrorResponse(HttpStatus.BAD_GATEWAY, e.getMessage());
         return new ResponseEntity<>(errorResponse, errorResponse.httpStatus());
     }
 }

@@ -31,7 +31,6 @@ public class EncryptionServiceImpl implements EncryptionService {
             @Value("${encryption.algorithm}") String algorithm,
             @Value("${encryption.tag-length-bit}") int tagLengthBit,
             @Value("${encryption.iv-length-byte}") int ivLengthByte) {
-
         this.secureRandom = new SecureRandom();
         this.algorithm = algorithm;
         this.tagLengthBit = tagLengthBit;

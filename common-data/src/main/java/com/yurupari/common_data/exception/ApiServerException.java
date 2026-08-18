@@ -1,4 +1,4 @@
-package com.yurupari.user_service.exception;
+package com.yurupari.common_data.exception;
 
 public class ApiServerException extends RuntimeException {
 

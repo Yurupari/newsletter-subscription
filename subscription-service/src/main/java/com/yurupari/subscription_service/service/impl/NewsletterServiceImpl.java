@@ -1,5 +1,6 @@
 package com.yurupari.subscription_service.service.impl;
 
+import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
 import com.yurupari.subscription_service.model.dto.NewsletterDto;
 import com.yurupari.subscription_service.model.mapper.NewsletterMapper;
 import com.yurupari.subscription_service.repository.NewsletterRepository;
@@ -21,6 +22,21 @@ public class NewsletterServiceImpl implements NewsletterService {
 
     @Override
     public Page<NewsletterDto> getNewsletters(Pageable pageable) {
-        return null;
+        log.info("Getting newsletters: pageNumber={}, pageSize={}",
+                pageable.getPageNumber(), pageable.getPageSize());
+
+        final var newsletters = newsletterRepository.findByIsActive(true, pageable);
+
+        return newsletters.map(newsletterMapper::toDto);
+    }
+
+    @Override
+    public NewsletterDto getNewsletterById(Long id) {
+        log.info("Getting newsletter: id={}", id);
+
+        final var newsletter = newsletterRepository.findByIdAndIsActive(id, true)
+                .orElseThrow(() -> new NewsletterNotFoundException(id));
+
+        return newsletterMapper.toDto(newsletter);
     }
 }

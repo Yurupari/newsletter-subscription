@@ -16,7 +16,7 @@ Build / run a service
 - Build each service `./gradlew :<service>:build`
 
 Architecture & key components
-- Microservices (top-level dirs): `api-gateway`, `newsletter-service`, `user-service`.
+- Microservices (top-level dirs): `api-gateway`, `subscription-service`, `user-service`.
 - Stack: **Spring Boot 4.1.0** + **Java 25** for all services. No Spring Cloud Config Server in this repo—config is per-service `application.yaml`.
 - Important infra files: `docker-compose.yaml`, `docker-compose-local.yaml`, `docker/postgres/init.sql`, `docker/kafka_data/`.
 - Human-oriented architecture diagrams: `diagrams/*.png` (see top-level `README.md`).
@@ -31,7 +31,7 @@ Observability & useful endpoints
 - Service ports (defaults in `application.yaml`):
     - `api-gateway` **9000**
     - `user-service` **8080**
-    - `newsletter-service` **8082**
+    - `subscription-service` **8081**
 
 Agent runbook checks (short)
 - Confirm ports reachable: **5432** (PostgreSQL)

@@ -6,6 +6,7 @@ import com.yurupari.subscription_service.model.http.response.SubscriptionRespons
 import java.util.List;
 
 public interface SubscriptionService {
+
     List<SubscriptionResponse> getSubscriptions(Long userId);
 
     SubscriptionResponse createSubscription(Long userId, SubscriptionRequest subscriptionRequest);

@@ -10,5 +10,4 @@ public record UserSubscriptionDto(
         Long newsletterId,
         SubscriptionStatus status
 ) {
-
 }

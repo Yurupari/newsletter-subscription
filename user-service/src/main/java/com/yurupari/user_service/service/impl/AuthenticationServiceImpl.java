@@ -39,14 +39,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 registerUserEvent.userId(), registerUserEvent.email());
 
         try {
-            var adminToken = "Bearer " + getAdminAccessToken();
+            final var adminToken = "Bearer " + getAdminAccessToken();
 
-            var credential = CredentialDto.builder()
+            final var credential = CredentialDto.builder()
                     .type("password")
                     .value(registerUserEvent.password())
                     .temporary(false)
                     .build();
-            var keycloakUser = KeycloakUserRepresentationRequest.builder()
+            final var keycloakUser = KeycloakUserRepresentationRequest.builder()
                     .username(registerUserEvent.email())
                     .email(registerUserEvent.email())
                     .enabled(true)
@@ -58,7 +58,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             log.info("Attempting to create user in Keycloak: userId={}, email={}",
                     registerUserEvent.userId(), registerUserEvent.email());
-            var keycloakResponse = keycloakClient.createUser(realm, adminToken, keycloakUser);
+            final var keycloakResponse = keycloakClient.createUser(realm, adminToken, keycloakUser);
 
             return Optional.ofNullable(keycloakResponse.getHeaders().getLocation())
                     .map(uri -> {
@@ -86,7 +86,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         formData.add("username", email);
         formData.add("password", encryptedPassword);
 
-        var basicAuthHeader = getBasicAuthHeader();
+        final var basicAuthHeader = getBasicAuthHeader();
 
         return keycloakClient.authenticateUser(realm, basicAuthHeader, formData);
     }
@@ -96,7 +96,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         log.info("Deleting user in Keycloak: userId={}", deleteUserEvent.userId());
 
         try {
-            var adminToken = "Bearer " + getAdminAccessToken();
+            final var adminToken = "Bearer " + getAdminAccessToken();
 
             keycloakClient.deleteUser(realm, deleteUserEvent.keycloakUserId(), adminToken);
         } catch(Exception e) {
@@ -111,7 +111,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("grant_type", "client_credentials");
 
-        var basicAuthHeader = getBasicAuthHeader();
+        final var basicAuthHeader = getBasicAuthHeader();
 
         return Optional.ofNullable(keycloakClient.authenticateClient(realm, basicAuthHeader, formData))
                 .map(AuthenticationResponse::accessToken)

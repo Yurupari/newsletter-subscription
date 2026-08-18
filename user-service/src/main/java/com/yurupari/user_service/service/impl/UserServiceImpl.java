@@ -82,7 +82,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void activateUser(RegisterUserEvent registerUserEvent) {
-        var id = registerUserEvent.userId();
+        final var id = registerUserEvent.userId();
         log.info("Activate user: id={}", id);
 
         userRepository.findById(id).ifPresentOrElse(
@@ -95,9 +95,9 @@ public class UserServiceImpl implements UserService {
     public AuthenticationResponse login(LoginRequest loginRequest) {
         log.info("Login user: email={}", loginRequest.email());
 
-        var email = loginRequest.email().toLowerCase();
+        final var email = loginRequest.email().toLowerCase();
 
-        var user = userRepository.findByEmail(email)
+        final var user = userRepository.findByEmail(email)
                 .filter(u -> UserStatus.ACTIVE.equals(u.getStatus()))
                 .orElseThrow(() -> new AuthenticationException("Invalid email or password"));
 
@@ -112,7 +112,7 @@ public class UserServiceImpl implements UserService {
 
         userValidationService.validateUserIdAndEmail(id, email);
 
-        var formattedEmail = Optional.ofNullable(email)
+        final var formattedEmail = Optional.ofNullable(email)
                 .map(String::toLowerCase)
                 .orElse(null);
 
@@ -127,12 +127,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse updateUser(Long id, String email, UserUpdateRequest updateRequest) {
+    public UserResponse updateUser(Long id, String email, UserUpdateRequest updateRequest) { // TODO: the Keycloak authentication must be updated
         log.info("Update user: id={}, email={}", id, email);
 
         userValidationService.validateUserIdAndEmail(id, email);
 
-        var formattedEmail = Optional.ofNullable(email)
+        final var formattedEmail = Optional.ofNullable(email)
                 .map(String::toLowerCase)
                 .orElse(null);
 
@@ -157,7 +157,7 @@ public class UserServiceImpl implements UserService {
 
         userValidationService.validateUserIdAndEmail(id, email);
 
-        var formattedEmail = Optional.ofNullable(email)
+        final var formattedEmail = Optional.ofNullable(email)
                 .map(String::toLowerCase)
                 .orElse(null);
 

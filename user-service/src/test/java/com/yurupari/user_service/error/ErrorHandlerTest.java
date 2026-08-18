@@ -1,5 +1,6 @@
 package com.yurupari.user_service.error;
 
+import com.yurupari.common_data.exception.ApiServerException;
 import com.yurupari.common_data.model.http.ErrorResponse;
 import com.yurupari.user_service.exception.AuthenticationException;
 import com.yurupari.user_service.exception.KeycloakClientException;
@@ -24,36 +25,43 @@ class ErrorHandlerTest {
     @Test
     void handleUserNotFoundException() {
         var exception = new UserNotFoundException(1L, "test@example.com");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleUserNotFoundException(exception);
+        var responseEntity = errorHandler.handleUserNotFoundException(exception);
         assertErrorResponse(responseEntity, HttpStatus.NOT_FOUND, exception.getMessage());
     }
 
     @Test
     void handleUserAlreadyExistsException() {
         var exception = new UserAlreadyExistsException("test@example.com");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleUserAlreadyExistsException(exception);
+        var responseEntity = errorHandler.handleUserAlreadyExistsException(exception);
         assertErrorResponse(responseEntity, HttpStatus.CONFLICT, exception.getMessage());
     }
 
     @Test
     void handleIllegalArgumentException() {
         var exception = new IllegalArgumentException("Illegal argument");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleIllegalArgumentException(exception);
+        var responseEntity = errorHandler.handleIllegalArgumentException(exception);
         assertErrorResponse(responseEntity, HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     @Test
     void handleAuthenticationException() {
         var exception = new AuthenticationException("Bad credentials");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleAuthenticationException(exception);
+        var responseEntity = errorHandler.handleAuthenticationException(exception);
         assertErrorResponse(responseEntity, HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
 
     @Test
     void handleKeycloakClientException() {
         var exception = new KeycloakClientException("Keycloak error");
-        ResponseEntity<ErrorResponse> responseEntity = errorHandler.handleKeycloakClientException(exception);
+        var responseEntity = errorHandler.handleKeycloakClientException(exception);
         assertErrorResponse(responseEntity, HttpStatus.FORBIDDEN, exception.getMessage());
+    }
+
+    @Test
+    void handleApiServerException() {
+        var exception = new ApiServerException("Keycloak error");
+        var responseEntity = errorHandler.handleApiServerException(exception);
+        assertErrorResponse(responseEntity, HttpStatus.BAD_GATEWAY, exception.getMessage());
     }
 
     private void assertErrorResponse(

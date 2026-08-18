@@ -4,3 +4,37 @@ server:
 spring:
   application:
     name: newsletter-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER}:${KAFKA_EXTERNAL_PORT}
+    template:
+      default-topic: confirm-subscription
+    topics:
+      confirm-subscription: confirm-subscription
+      unsubscribe: unsubscribe
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,unsubscribeEvent:com.yurupari.common_data.kafka.event.UnsubscribeEvent
+
+resilience4j:
+  retry:
+    instances:
+      userService:
+        max-attempts: 3
+        wait-duration: 100ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.io.IOException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Forbidden

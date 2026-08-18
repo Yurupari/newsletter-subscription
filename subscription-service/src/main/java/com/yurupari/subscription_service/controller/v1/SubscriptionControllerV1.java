@@ -46,7 +46,8 @@ public class SubscriptionControllerV1 {
 
     @Operation(summary = "Get active/pending subscriptions for an user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of subscriptions for an user")
+            @ApiResponse(responseCode = "200", description = "List of subscriptions for an user"),
+            @ApiResponse(responseCode = "404", description = "User not found")
     })
     @GetMapping("/user/{userId}/subscriptions")
     public ResponseEntity<List<SubscriptionResponse>> getSubscriptions(@PathVariable Long userId) {
@@ -57,7 +58,8 @@ public class SubscriptionControllerV1 {
     @Operation(summary = "Initiates subscription for an user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Subscription initiated for an user"),
-            @ApiResponse(responseCode = "400", description = "At least one parameter must be provided")
+            @ApiResponse(responseCode = "400", description = "Newsletter ID must be provided"),
+            @ApiResponse(responseCode = "404", description = "User or newsletter not found")
     })
     @PostMapping("/user/{userId}/subscription")
     public ResponseEntity<SubscriptionResponse> subscribe(
@@ -70,7 +72,7 @@ public class SubscriptionControllerV1 {
 
     @Operation(summary = "Confirm subscription for an user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription confirmed for an user")
+            @ApiResponse(responseCode = "204", description = "Subscription confirmed for an user")
     })
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirmSubscription(@RequestParam String token) {
@@ -80,7 +82,7 @@ public class SubscriptionControllerV1 {
 
     @Operation(summary = "Delete subscription for an user")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Subscription deleted for an user")
+            @ApiResponse(responseCode = "204", description = "Subscription deleted for an user")
     })
     @DeleteMapping("/user/{userId}/subscription/{subscriptionId}")
     public ResponseEntity<Void> deleteSubscription(

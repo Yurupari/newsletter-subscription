@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -36,6 +37,9 @@ class UserProducerTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(userProducer, "registerUserTopic", "register-user");
+        ReflectionTestUtils.setField(userProducer, "deleteUserTopic", "delete-user");
+
         registerUserEvent = TestModelFactory.createRegisterUserEvent(
                 1L,
                 "test@email.com",
