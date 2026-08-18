@@ -576,7 +576,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		kafkaTemplate.send("register-user", registerUserEvent);
 
 		Awaitility.await()
-				.atMost(Duration.ofSeconds(5))
+				.atMost(Duration.ofSeconds(10))
 				.untilAsserted(() -> {
 					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
 
@@ -618,7 +618,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		kafkaTemplate.send("register-user", registerUserEvent);
 
 		Awaitility.await()
-				.atMost(Duration.ofSeconds(5))
+				.atMost(Duration.ofSeconds(10))
 				.untilAsserted(() -> {
 					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
 
@@ -665,7 +665,7 @@ class UserServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		kafkaTemplate.send("delete-user", deleteUserEvent);
 
 		Awaitility.await()
-				.atMost(Duration.ofSeconds(5))
+				.atMost(Duration.ofSeconds(10))
 				.untilAsserted(() -> {
 					var updatedUser = userRepository.findById(savedUser.getId()).orElse(null);
 

@@ -11,7 +11,6 @@ dependencies {
 	}
 	implementation("org.springframework.boot:spring-boot-starter-kafka")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
-	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j:${circuitBreakerResilience4jVersion}")
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")

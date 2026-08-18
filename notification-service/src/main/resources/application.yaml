@@ -57,5 +57,12 @@ resilience4j:
           - org.springframework.web.client.HttpClientErrorException$BadRequest
           - org.springframework.web.client.HttpClientErrorException$Forbidden
 
+services:
+  user-service:
+    url: ${USER_SERVICE_URL}
+
 email:
   from: noreply@yurupari.com
+  confirmation-subscription:
+    subject: Confirm Subscription
+    link-prefix: ${SUBSCRIPTION_SERVICE_URL}/api/v1/subscription/confirm/
