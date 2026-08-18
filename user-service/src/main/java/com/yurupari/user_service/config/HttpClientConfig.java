@@ -1,8 +1,8 @@
 package com.yurupari.user_service.config;
 
+import com.yurupari.common_data.exception.ApiServerException;
 import com.yurupari.user_service.client.KeycloakClient;
 import com.yurupari.user_service.exception.KeycloakClientException;
-import com.yurupari.user_service.exception.ApiServerException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
