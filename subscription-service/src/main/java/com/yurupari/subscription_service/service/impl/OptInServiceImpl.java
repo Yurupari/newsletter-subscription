@@ -1,16 +1,20 @@
 package com.yurupari.subscription_service.service.impl;
 
+import com.yurupari.subscription_service.exception.OptInNotFoundException;
 import com.yurupari.subscription_service.model.dto.OptInDto;
+import com.yurupari.subscription_service.model.entity.OptIn;
 import com.yurupari.subscription_service.model.mapper.OptInMapper;
 import com.yurupari.subscription_service.repository.OptInRepository;
 import com.yurupari.subscription_service.service.OptInService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,9 @@ public class OptInServiceImpl implements OptInService {
     private final OptInRepository optInRepository;
 
     private final OptInMapper optInMapper;
+
+    @Value("${token.valid-time}")
+    private Long tokenValidTime;
 
     @Override
     @Transactional
@@ -53,5 +60,30 @@ public class OptInServiceImpl implements OptInService {
                     log.warn("Opt-in not found: token={}", token);
                     return Optional.empty();
                 });
+    }
+
+    @Override
+    public OptInDto getOptInBySubscriptionId(Long subscriptionId) {
+        log.info("Find opt-in: subscriptionId={}", subscriptionId);
+
+        var optIn = optInRepository.findBySubscriptionId(subscriptionId)
+                .orElseThrow(() -> new OptInNotFoundException(String.format("Opt-in not found: subscriptionId=%s",
+                        subscriptionId)));
+
+        return optInMapper.toDto(optIn);
+    }
+
+    @Override
+    public OptInDto createOptIn(Long subscriptionId) {
+        log.info("Creating opt-in: subscriptionId={}", subscriptionId);
+
+        var optIn = OptIn.builder()
+                .subscriptionId(subscriptionId)
+                .token(UUID.randomUUID().toString())
+                .expiresAt(Instant.now().plusSeconds(tokenValidTime))
+                .build();
+        var savedOptIn = optInRepository.saveAndFlush(optIn);
+
+        return optInMapper.toDto(savedOptIn);
     }
 }

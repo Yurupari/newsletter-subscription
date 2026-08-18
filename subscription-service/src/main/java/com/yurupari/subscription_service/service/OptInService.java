@@ -7,4 +7,8 @@ import java.util.Optional;
 public interface OptInService {
 
     Optional<OptInDto> confirmSubscription(String token);
+
+    OptInDto getOptInBySubscriptionId(Long subscriptionId);
+
+    OptInDto createOptIn(Long subscriptionId);
 }

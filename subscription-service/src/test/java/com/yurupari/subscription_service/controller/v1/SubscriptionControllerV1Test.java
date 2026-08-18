@@ -59,6 +59,38 @@ class SubscriptionControllerV1Test {
     }
 
     @Test
+    void registerNewsletter_Success() {
+        var request = TestModelFactory.buildNewsletterRequest(
+                "Newsletter",
+                "Description"
+        );
+
+        var newsletter = TestModelFactory.buildNewsletterDto(
+                1L,
+                "Newsletter",
+                "Description",
+                true
+        );
+        when(newsletterService.registerNewsletter(any())).thenReturn(newsletter);
+
+        var response = subscriptionControllerV1.registerNewsletter(request);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+
+    @Test
+    void deleteNewsletter_Success() {
+        doNothing().when(newsletterService).deleteNewsletter(anyLong());
+
+        var response = subscriptionControllerV1.deleteNewsletter(1L);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    }
+
+    @Test
     void getSubscriptions_Success() {
         var newsletter = TestModelFactory.buildNewsletterDto(
                 1L,

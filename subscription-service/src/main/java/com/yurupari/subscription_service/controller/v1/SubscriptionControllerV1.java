@@ -1,6 +1,7 @@
 package com.yurupari.subscription_service.controller.v1;
 
 import com.yurupari.subscription_service.model.dto.NewsletterDto;
+import com.yurupari.subscription_service.model.http.request.NewsletterRequest;
 import com.yurupari.subscription_service.model.http.request.SubscriptionRequest;
 import com.yurupari.subscription_service.model.http.response.SubscriptionResponse;
 import com.yurupari.subscription_service.service.NewsletterService;
@@ -44,6 +45,27 @@ public class SubscriptionControllerV1 {
         return ResponseEntity.ok(newsletters);
     }
 
+    @Operation(summary = "Register a newsletter")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Newsletter registered successfully")
+    })
+    @PostMapping("/newsletter")
+    public ResponseEntity<NewsletterDto> registerNewsletter(@RequestBody NewsletterRequest newsletterRequest) {
+        var newsletter = newsletterService.registerNewsletter(newsletterRequest);
+        return ResponseEntity.ok(newsletter);
+    }
+
+    @Operation(summary = "Delete a newsletter")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Newsletter deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Newsletter not found")
+    })
+    @DeleteMapping("/newsletter/{newsletterId}")
+    public ResponseEntity<Page<NewsletterDto>> deleteNewsletter(@PathVariable Long newsletterId) {
+        newsletterService.deleteNewsletter(newsletterId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Get active/pending subscriptions for an user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "List of subscriptions for an user"),
@@ -59,7 +81,8 @@ public class SubscriptionControllerV1 {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Subscription initiated for an user"),
             @ApiResponse(responseCode = "400", description = "Newsletter ID must be provided"),
-            @ApiResponse(responseCode = "404", description = "User or newsletter not found")
+            @ApiResponse(responseCode = "404", description = "User or newsletter not found"),
+            @ApiResponse(responseCode = "409", description = "User already subscribed to the newsletter")
     })
     @PostMapping("/user/{userId}/subscription")
     public ResponseEntity<SubscriptionResponse> subscribe(

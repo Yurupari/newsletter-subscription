@@ -6,6 +6,7 @@ import lombok.Builder;
 public record ConfirmSubscriptionEvent(
         Long subscriptionId,
         Long userId,
-        Long newsletterId
+        Long newsletterId,
+        String token
 ) {
 }

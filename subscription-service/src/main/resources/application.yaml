@@ -54,3 +54,6 @@ resilience4j:
 services:
   user-service:
     url: ${USER_SERVICE_URL}
+
+token:
+  valid-time: 3600

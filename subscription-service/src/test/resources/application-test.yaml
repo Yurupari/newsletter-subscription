@@ -20,3 +20,6 @@ spring:
 services:
   user-service:
     url: http://localhost:8080
+
+token:
+  valid-time: 3600

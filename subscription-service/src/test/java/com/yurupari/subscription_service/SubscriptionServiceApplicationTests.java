@@ -37,8 +37,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.yurupari.subscription_service.utils.TestConstants.NEWSLETTER_REQUEST_JSON;
 import static com.yurupari.subscription_service.utils.TestConstants.SUBSCRIPTION_REQUEST_JSON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -166,6 +168,45 @@ class SubscriptionServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	}
 
 	@Test
+	void registerNewsletter_Success() throws Exception {
+		var requestJson = jsonTestUtils.loadRequest(NEWSLETTER_REQUEST_JSON);
+
+		mockMvc.perform(post("/api/v1/subscription/newsletter")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestJson))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").exists())
+				.andExpect(jsonPath("$.title").value("New Newsletter"))
+				.andExpect(jsonPath("$.description").value("A brand new newsletter"))
+				.andExpect(jsonPath("$.isActive").value(true));
+	}
+
+	@Test
+	void deleteNewsletter_Success() throws Exception {
+		var newsletter = newsletterRepository.saveAndFlush(TestModelFactory.buildNewsletter(
+				null,
+				"Newsletter",
+				"Description",
+				true,
+				null,
+				null
+		));
+
+		mockMvc.perform(delete("/api/v1/subscription/newsletter/" + newsletter.getId()))
+				.andExpect(status().isNoContent());
+
+		var updatedNewsletter = newsletterRepository.findById(newsletter.getId());
+		assertTrue(updatedNewsletter.isPresent());
+		assertFalse(updatedNewsletter.get().getIsActive());
+	}
+
+	@Test
+	void deleteNewsletter_Fail_NotFound() throws Exception {
+		mockMvc.perform(delete("/api/v1/subscription/newsletter/999"))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
 	void getSubscriptions_Success() throws Exception {
 		var newsletter = newsletterRepository.saveAndFlush(TestModelFactory.buildNewsletter(
 				null,
@@ -243,6 +284,42 @@ class SubscriptionServiceApplicationTests extends PostgreSQLTestcontainerBase {
 				.andExpect(jsonPath("$.newsletter.description").value(newsletter.getDescription()))
 				.andExpect(jsonPath("$.newsletter.isActive").value(newsletter.getIsActive()))
 				.andExpect(jsonPath("$.status").value(SubscriptionStatus.PENDING_CONFIRMATION.name()));
+	}
+
+	@Test
+	void subscribe_Fail_AlreadySubscribed() throws Exception {
+		var requestJson = jsonTestUtils.loadRequest(SUBSCRIPTION_REQUEST_JSON);
+
+		var user = TestModelFactory.buildUser(
+				1L,
+				"john.doe@email",
+				"John",
+				"Doe"
+		);
+		when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+		var newsletter = newsletterRepository.saveAndFlush(TestModelFactory.buildNewsletter(
+				null,
+				"Newsletter",
+				"Description",
+				true,
+				null,
+				null
+		));
+
+		var userSubscription = userSubscriptionRepository.saveAndFlush(TestModelFactory.buildUserSubscription(
+				null,
+				1L,
+				newsletter.getId(),
+				SubscriptionStatus.CONFIRMED,
+				null,
+				null
+		));
+
+		mockMvc.perform(post("/api/v1/subscription/user/1/subscription")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestJson))
+				.andExpect(status().isConflict());
 	}
 
 	@Test

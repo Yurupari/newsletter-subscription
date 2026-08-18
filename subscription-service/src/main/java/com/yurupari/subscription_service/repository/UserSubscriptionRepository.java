@@ -3,6 +3,7 @@ package com.yurupari.subscription_service.repository;
 import com.yurupari.subscription_service.model.entity.UserSubscription;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
 import com.yurupari.subscription_service.model.http.response.SubscriptionResponse;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,4 +38,6 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
     );
 
     Optional<UserSubscription> findByIdAndUserId(Long id, Long userId);
+
+    Optional<UserSubscription> findByUserIdAndNewsletterId(Long userId, Long newsletterId);
 }

@@ -2,6 +2,7 @@ package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
 import com.yurupari.subscription_service.model.dto.NewsletterDto;
+import com.yurupari.subscription_service.model.http.request.NewsletterRequest;
 import com.yurupari.subscription_service.model.mapper.NewsletterMapper;
 import com.yurupari.subscription_service.repository.NewsletterRepository;
 import com.yurupari.subscription_service.service.NewsletterService;
@@ -38,5 +39,26 @@ public class NewsletterServiceImpl implements NewsletterService {
                 .orElseThrow(() -> new NewsletterNotFoundException(id));
 
         return newsletterMapper.toDto(newsletter);
+    }
+
+    @Override
+    public NewsletterDto registerNewsletter(NewsletterRequest newsletterRequest) {
+        log.info("Registering newsletter: request={}", newsletterRequest);
+
+        final var newsletter = newsletterMapper.toEntity(newsletterRequest);
+        var savedNewsletter = newsletterRepository.saveAndFlush(newsletter);
+
+        return newsletterMapper.toDto(savedNewsletter);
+    }
+
+    @Override
+    public void deleteNewsletter(Long id) {
+        log.info("Deleting newsletter: newsletterId={}", id);
+
+        var newsletter = newsletterRepository.findById(id)
+                .orElseThrow(() -> new NewsletterNotFoundException(id));
+
+        newsletter.setIsActive(false);
+        newsletterRepository.saveAndFlush(newsletter);
     }
 }

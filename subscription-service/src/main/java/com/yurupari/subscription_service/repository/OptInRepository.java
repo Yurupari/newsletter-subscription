@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface OptInRepository extends JpaRepository<OptIn, Long> {
 
     Optional<OptIn> findByToken(String token);
+
+    Optional<OptIn> findBySubscriptionId(Long subscriptionId);
 }

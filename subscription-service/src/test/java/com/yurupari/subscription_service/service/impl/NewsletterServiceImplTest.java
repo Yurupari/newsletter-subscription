@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -87,5 +90,55 @@ class NewsletterServiceImplTest {
         when(newsletterRepository.findByIdAndIsActive(any(), anyBoolean())).thenReturn(Optional.empty());
 
         assertThrows(NewsletterNotFoundException.class, () -> newsletterService.getNewsletterById(1L));
+    }
+
+    @Test
+    void registerNewsletter_Success() {
+        var request = TestModelFactory.buildNewsletterRequest(
+                "Newsletter",
+                "Description"
+        );
+
+        var newsletter = TestModelFactory.buildNewsletter(
+                1L,
+                "Newsletter",
+                "Description",
+                true,
+                Instant.now(),
+                Instant.now()
+        );
+        when(newsletterRepository.saveAndFlush(any())).thenReturn(newsletter);
+
+        var response = newsletterService.registerNewsletter(request);
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void deleteNewsletter_Success() {
+        var newsletter = TestModelFactory.buildNewsletter(
+                1L,
+                "Newsletter",
+                "Description",
+                true,
+                Instant.now(),
+                Instant.now()
+        );
+        when(newsletterRepository.findById(any())).thenReturn(Optional.of(newsletter));
+
+        newsletterService.deleteNewsletter(1L);
+
+        assertEquals(false, newsletter.getIsActive());
+
+        verify(newsletterRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    void deleteNewsletter_NotFound() {
+        when(newsletterRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThrows(NewsletterNotFoundException.class, () -> newsletterService.deleteNewsletter(1L));
+
+        verify(newsletterRepository, never()).saveAndFlush(any());
     }
 }

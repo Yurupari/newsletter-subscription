@@ -2,6 +2,7 @@ package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.subscription_service.client.UserServiceClient;
 import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
+import com.yurupari.subscription_service.exception.UserSubscriptionExistsException;
 import com.yurupari.subscription_service.exception.UserSubscriptionNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
@@ -18,6 +19,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -82,7 +84,7 @@ class SubscriptionServiceImplTest {
     }
 
     @Test
-    void createSubscription_Success() {
+    void createSubscription_Success_NewSubscription() {
         var subscriptionRequest = TestModelFactory.buildSubscriptionRequest(1L);
 
         var user = TestModelFactory.buildUser(
@@ -92,6 +94,8 @@ class SubscriptionServiceImplTest {
                 "lastName"
         );
         when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+        when(userSubscriptionRepository.findByUserIdAndNewsletterId(anyLong(), anyLong())).thenReturn(Optional.empty());
 
         var newsletter = TestModelFactory.buildNewsletterDto(
                 1L,
@@ -107,8 +111,18 @@ class SubscriptionServiceImplTest {
                 1L,
                 null,
                 null,
-                null);
+                null
+        );
         when(userSubscriptionRepository.saveAndFlush(any())).thenReturn(userSubscription);
+
+        var optIn = TestModelFactory.buildOptInDto(
+                1L,
+                1L,
+                "token",
+                null,
+                null
+        );
+        when(optInService.createOptIn(anyLong())).thenReturn(optIn);
 
         doNothing().when(subscriptionProducer).produceConfirmSubscriptionEvent(any());
 
@@ -119,6 +133,148 @@ class SubscriptionServiceImplTest {
         assertNotNull(response);
         assertEquals(user.id(), response.userId());
         assertEquals(newsletter.id(), response.newsletter().id());
+    }
+
+    @Test
+    void createSubscription_Success_PendingSubscription() {
+        var subscriptionRequest = TestModelFactory.buildSubscriptionRequest(1L);
+
+        var user = TestModelFactory.buildUser(
+                1L,
+                "email",
+                "firstName",
+                "lastName"
+        );
+        when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+        var existingSubscription = TestModelFactory.buildUserSubscription(
+                1L,
+                1L,
+                1L,
+                SubscriptionStatus.PENDING_CONFIRMATION,
+                null,
+                null
+        );
+        when(userSubscriptionRepository.findByUserIdAndNewsletterId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(existingSubscription));
+
+        var optIn = TestModelFactory.buildOptInDto(
+                1L,
+                1L,
+                "token",
+                Instant.now().plusSeconds(3600),
+                null
+        );
+        when(optInService.getOptInBySubscriptionId(anyLong())).thenReturn(optIn);
+
+        var newsletter = TestModelFactory.buildNewsletterDto(
+                1L,
+                "title",
+                "description",
+                true
+        );
+        when(newsletterService.getNewsletterById(anyLong())).thenReturn(newsletter);
+
+        var newOptIn = TestModelFactory.buildOptInDto(
+                1L,
+                1L,
+                "new-token",
+                null,
+                null
+        );
+        when(optInService.createOptIn(anyLong())).thenReturn(newOptIn);
+
+        doNothing().when(subscriptionProducer).produceConfirmSubscriptionEvent(any());
+
+        var response = subscriptionService.createSubscription(1L, subscriptionRequest);
+
+        verify(subscriptionProducer, times(1)).produceConfirmSubscriptionEvent(any());
+
+        assertNotNull(response);
+        assertEquals(user.id(), response.userId());
+        assertEquals(newsletter.id(), response.newsletter().id());
+    }
+
+    @Test
+    void createSubscription_Success_UnsubscribedSubscription() {
+        var subscriptionRequest = TestModelFactory.buildSubscriptionRequest(1L);
+
+        var user = TestModelFactory.buildUser(
+                1L,
+                "email",
+                "firstName",
+                "lastName"
+        );
+        when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+        var existingSubscription = TestModelFactory.buildUserSubscription(
+                1L,
+                1L,
+                1L,
+                SubscriptionStatus.UNSUBSCRIBED,
+                null,
+                null
+        );
+        when(userSubscriptionRepository.findByUserIdAndNewsletterId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(existingSubscription));
+
+        var newsletter = TestModelFactory.buildNewsletterDto(
+                1L,
+                "title",
+                "description",
+                true
+        );
+        when(newsletterService.getNewsletterById(anyLong())).thenReturn(newsletter);
+
+        var optIn = TestModelFactory.buildOptInDto(
+                1L,
+                1L,
+                "token",
+                null,
+                null
+        );
+        when(optInService.createOptIn(anyLong())).thenReturn(optIn);
+
+        doNothing().when(subscriptionProducer).produceConfirmSubscriptionEvent(any());
+
+        var response = subscriptionService.createSubscription(1L, subscriptionRequest);
+
+        verify(subscriptionProducer, times(1)).produceConfirmSubscriptionEvent(any());
+        verify(userSubscriptionRepository, times(1)).saveAndFlush(any());
+
+        assertNotNull(response);
+        assertEquals(user.id(), response.userId());
+        assertEquals(newsletter.id(), response.newsletter().id());
+        assertEquals(SubscriptionStatus.PENDING_CONFIRMATION, response.status());
+    }
+
+    @Test
+    void createSubscription_Fail_AlreadySubscribed() {
+        var subscriptionRequest = TestModelFactory.buildSubscriptionRequest(1L);
+
+        var user = TestModelFactory.buildUser(
+                1L,
+                "email",
+                "firstName",
+                "lastName"
+        );
+        when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+        var existingSubscription = TestModelFactory.buildUserSubscription(
+                1L,
+                1L,
+                1L,
+                SubscriptionStatus.CONFIRMED,
+                null,
+                null
+        );
+        when(userSubscriptionRepository.findByUserIdAndNewsletterId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(existingSubscription));
+
+        assertThrows(UserSubscriptionExistsException.class,
+                () -> subscriptionService.createSubscription(1L, subscriptionRequest));
+
+        verify(subscriptionProducer, never()).produceConfirmSubscriptionEvent(any());
     }
 
     @Test

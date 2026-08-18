@@ -1,6 +1,8 @@
 package com.yurupari.subscription_service.service.impl;
 
+import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
 import com.yurupari.subscription_service.client.UserServiceClient;
+import com.yurupari.subscription_service.exception.UserSubscriptionExistsException;
 import com.yurupari.subscription_service.exception.UserSubscriptionNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
 import com.yurupari.subscription_service.model.dto.NewsletterDto;
@@ -19,7 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -54,17 +58,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         userServiceClient.getUser(userId);
 
-        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+        var userSubscription = userSubscriptionRepository.findByUserIdAndNewsletterId(userId, subscriptionRequest.newsletterId());
+        if (userSubscription.isPresent()) {
+            var existingSubscription = userSubscription.get();
+            switch (existingSubscription.getStatus()) {
+                case PENDING_CONFIRMATION -> {
+                    return processPendingSubscription(userId, subscriptionRequest, existingSubscription);
+                }
+                case UNSUBSCRIBED -> {
+                    return processUnsubscribed(userId, subscriptionRequest, existingSubscription);
+                }
+                default -> {
+                    throw new UserSubscriptionExistsException(userId, subscriptionRequest.newsletterId());
+                }
+            }
+        }
 
-        var userSubscription = UserSubscription.builder()
-                .userId(userId)
-                .newsletterId(newsletter.id())
-                .build();
-        var savedSubscription = userSubscriptionRepository.saveAndFlush(userSubscription);
-
-        subscriptionProducer.produceConfirmSubscriptionEvent(userSubscriptionMapper.toConfirmSubscriptionEvent(savedSubscription));
-
-        return buildSubscriptionResponse(savedSubscription, newsletter);
+        return processNewSubscription(userId, subscriptionRequest);
     }
 
     @Override
@@ -92,6 +102,84 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         var updatedSubscription = userSubscriptionRepository.saveAndFlush(userSubscription);
 
         subscriptionProducer.produceUnsubscribeEvent(userSubscriptionMapper.toUnsubscribeEvent(updatedSubscription));
+    }
+
+    private SubscriptionResponse processPendingSubscription(
+            Long userId,
+            SubscriptionRequest subscriptionRequest,
+            UserSubscription existingSubscription
+    ) {
+        var optIn = optInService.getOptInBySubscriptionId(existingSubscription.getId());
+
+        if (Optional.ofNullable(optIn.usedAt()).isPresent()
+                || optIn.expiresAt().isBefore(Instant.now())) {
+            throw new UserSubscriptionExistsException(userId, subscriptionRequest.newsletterId());
+        }
+
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+
+        var newOptIn = optInService.createOptIn(existingSubscription.getId());
+
+        var confirmSubscriptionEvent = ConfirmSubscriptionEvent.builder()
+                .subscriptionId(existingSubscription.getId())
+                .userId(userId)
+                .newsletterId(newsletter.id())
+                .token(newOptIn.token())
+                .build();
+
+        subscriptionProducer.produceConfirmSubscriptionEvent(confirmSubscriptionEvent);
+
+        return buildSubscriptionResponse(existingSubscription, newsletter);
+    }
+
+    private SubscriptionResponse processUnsubscribed(
+            Long userId,
+            SubscriptionRequest subscriptionRequest,
+            UserSubscription existingSubscription
+    ) {
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+
+        existingSubscription.setStatus(SubscriptionStatus.PENDING_CONFIRMATION);
+        userSubscriptionRepository.saveAndFlush(existingSubscription);
+
+        var optIn = optInService.createOptIn(existingSubscription.getId());
+
+        var confirmSubscriptionEvent = ConfirmSubscriptionEvent.builder()
+                .subscriptionId(existingSubscription.getId())
+                .userId(userId)
+                .newsletterId(newsletter.id())
+                .token(optIn.token())
+                .build();
+
+        subscriptionProducer.produceConfirmSubscriptionEvent(confirmSubscriptionEvent);
+
+        return buildSubscriptionResponse(existingSubscription, newsletter);
+    }
+
+    private SubscriptionResponse processNewSubscription(
+            Long userId,
+            SubscriptionRequest subscriptionRequest
+    ) {
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+
+        var newUserSubscription = UserSubscription.builder()
+                .userId(userId)
+                .newsletterId(newsletter.id())
+                .build();
+        var savedSubscription = userSubscriptionRepository.saveAndFlush(newUserSubscription);
+
+        var optIn = optInService.createOptIn(savedSubscription.getId());
+
+        var confirmSubscriptionEvent = ConfirmSubscriptionEvent.builder()
+                .subscriptionId(savedSubscription.getId())
+                .userId(userId)
+                .newsletterId(newsletter.id())
+                .token(optIn.token())
+                .build();
+
+        subscriptionProducer.produceConfirmSubscriptionEvent(confirmSubscriptionEvent);
+
+        return buildSubscriptionResponse(savedSubscription, newsletter);
     }
 
     private SubscriptionResponse buildSubscriptionResponse(UserSubscription userSubscription, NewsletterDto newsletter) {

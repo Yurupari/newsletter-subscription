@@ -8,6 +8,7 @@ import com.yurupari.subscription_service.model.entity.Newsletter;
 import com.yurupari.subscription_service.model.entity.OptIn;
 import com.yurupari.subscription_service.model.entity.UserSubscription;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
+import com.yurupari.subscription_service.model.http.request.NewsletterRequest;
 import com.yurupari.subscription_service.model.http.request.SubscriptionRequest;
 import com.yurupari.subscription_service.model.http.response.SubscriptionResponse;
 import com.yurupari.subscription_service.model.http.response.UserResponse;
@@ -167,6 +168,13 @@ public class TestModelFactory {
                 .subscriptionId(subscriptionId)
                 .userId(userId)
                 .newsletterId(newsletterId)
+                .build();
+    }
+
+    public static NewsletterRequest buildNewsletterRequest(String title, String description) {
+        return NewsletterRequest.builder()
+                .title(title)
+                .description(description)
                 .build();
     }
 }
