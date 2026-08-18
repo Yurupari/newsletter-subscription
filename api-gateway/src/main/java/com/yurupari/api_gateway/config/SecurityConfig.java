@@ -16,8 +16,8 @@ import java.util.Arrays;
 @Configuration
 public class SecurityConfig {
 
-    @Value("${keycloak.auth.jwt-set-uri}")
-    private String jwtSetUri;
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+    private String jwkSetUri;
 
     @Value("${security.excluded.urls}")
     private String[] excludedUrls;
@@ -44,6 +44,6 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwtSetUri).build();
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
 }

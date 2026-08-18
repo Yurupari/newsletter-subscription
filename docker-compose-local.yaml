@@ -109,6 +109,29 @@ services:
       - keycloak
       - kafka
 
+  subscription-service:
+    build:
+      context: .
+      dockerfile: ./subscription-service/src/main/docker/Dockerfile
+    container_name: newsletter-subscription-subscription-service
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=newsletter_subscription
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - USER_SERVICE_URL=http://user-service:8080
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - kafka
+
   api-gateway:
     build:
       context: .
@@ -116,8 +139,8 @@ services:
     container_name: newsletter-subscription-api-gateway
     environment:
       - USER_SERVICE_URL=http://user-service:8080
-      - NEWSLETTER_SERVICE_URL=http://newsletter-service:8081
-      - JWT_SET_URI=http://keycloak:8080/realms/ns-security-realm/protocol/openid-connect/certs
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8081
+      - JWK_SET_URI=http://keycloak:8080/realms/ns-security-realm/protocol/openid-connect/certs
       - ISSUER_URI=http://keycloak:8080/realms/ns-security-realm
     volumes:
       - ./logs/:/logs

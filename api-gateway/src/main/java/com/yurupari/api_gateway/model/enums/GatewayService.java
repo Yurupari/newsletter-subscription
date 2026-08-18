@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum GatewayService {
 
     USER("user-service"),
-    NEWSLETTER("newsletter-service");
+    SUBSCRIPTION("subscription-service");
 
     private final String name;
 }

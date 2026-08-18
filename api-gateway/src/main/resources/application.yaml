@@ -13,7 +13,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${JWT_SET_URI:http://localhost:8081/api/v1/auth/.well-known/jwks.json}
+          jwk-set-uri: ${JWK_SET_URI}
 
 services:
   items:
@@ -24,12 +24,12 @@ services:
       fallbackPath: /fallback/user
       fallbackMessage: "User Service is currently unavailable"
 
-    newsletter-service:
-      url: ${NEWSLETTER_SERVICE_URL}
-      path: /api/v1/newsletter/**
-      circuitBreakerId: newsletterServiceCircuitBreaker
-      fallbackPath: /fallback/newsletter
-      fallbackMessage: "Newsletter Service is currently unavailable"
+    subscription-service:
+      url: ${SUBSCRIPTION_SERVICE_URL}
+      path: /api/v1/subscription/**
+      circuitBreakerId: subscriptionServiceCircuitBreaker
+      fallbackPath: /fallback/subscription
+      fallbackMessage: "Subscription Service is currently unavailable"
 
 security:
   excluded:
@@ -50,7 +50,3 @@ resilience4j:
     configs:
       default:
         timeoutDuration: 3s
-
-keycloak:
-  auth:
-    jwt-set-uri: ${JWT_SET_URI}

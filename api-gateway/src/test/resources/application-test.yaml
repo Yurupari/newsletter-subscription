@@ -1,3 +1,10 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9999/jwk-set-uri
+
 services:
   items:
     user-service:
@@ -6,10 +13,12 @@ services:
       circuitBreakerId: userServiceCircuitBreaker
       fallbackPath: /fallback/user
       fallbackMessage: User service is down
-
-keycloak:
-  auth:
-    jwt-set-uri: http://localhost:9999/jwt-set-uri
+    subscription-service:
+      url: http://localhost:9999
+      path: /api/v1/subscription/**
+      circuitBreakerId: subscriptionServiceCircuitBreaker
+      fallbackPath: /fallback/subscription
+      fallbackMessage: Subscription service is down
 
 security:
   excluded:
