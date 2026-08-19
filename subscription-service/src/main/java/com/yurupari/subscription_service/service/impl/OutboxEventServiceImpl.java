@@ -26,7 +26,7 @@ public class OutboxEventServiceImpl implements OutboxEventService {
 
         var outboxEvent = OutboxEvent.builder()
                 .aggregateId(subscriptionId)
-                .eventType(eventType.name())
+                .eventType(eventType)
                 .payload(payload)
                 .build();
         var savedOutboxEvent = outboxEventRepository.saveAndFlush(outboxEvent);

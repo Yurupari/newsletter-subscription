@@ -1,18 +1,22 @@
 package com.yurupari.subscription_service.model.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.yurupari.common_data.model.enums.OutboxStatus;
+import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
+import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import lombok.Builder;
+
+import java.time.Instant;
 
 @Builder
 public record OutboxEventDto(
         Long id,
-        String aggregateType,
+        OutboxAggregateType aggregateType,
         Long aggregateId,
-        String eventType,
+        OutboxEventType eventType,
         String payload,
-        String status,
+        OutboxStatus status,
         Integer retryCount,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") String createdAt,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") String processedAt
+        Instant createdAt,
+        Instant processedAt
 ) {
 }

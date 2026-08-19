@@ -4,6 +4,8 @@ import com.yurupari.common_data.model.enums.OutboxStatus;
 import com.yurupari.subscription_service.config.PropertiesPayloads;
 import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
+import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
+import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import com.yurupari.subscription_service.service.NewsletterService;
 import com.yurupari.subscription_service.service.OutboxEventService;
 import com.yurupari.subscription_service.utils.TestModelFactory;
@@ -70,12 +72,13 @@ class CPDServiceImplTest {
 
         var outboxEvent = TestModelFactory.buildOutboxEventDto(
                 1L,
+                OutboxAggregateType.SUBSCRIPTION,
                 1L,
-                "NEWSLETTER_SUBSCRIBED",
+                OutboxEventType.NEWSLETTER_SUBSCRIBED,
                 "payload",
-                "PENDING",
+                OutboxStatus.PENDING,
                 0,
-                Instant.now().toString(),
+                Instant.now(),
                 null
         );
         when(outboxEventService.saveOutboxEvent(anyLong(), any(), anyString())).thenReturn(outboxEvent);
@@ -112,12 +115,13 @@ class CPDServiceImplTest {
 
         var outboxEvent = TestModelFactory.buildOutboxEventDto(
                 1L,
+                OutboxAggregateType.SUBSCRIPTION,
                 1L,
-                "NEWSLETTER_UNSUBSCRIBED",
+                OutboxEventType.NEWSLETTER_UNSUBSCRIBED,
                 "payload",
-                "PENDING",
+                OutboxStatus.PENDING,
                 0,
-                Instant.now().toString(),
+                Instant.now(),
                 null
         );
         when(outboxEventService.saveOutboxEvent(anyLong(), any(), anyString())).thenReturn(outboxEvent);

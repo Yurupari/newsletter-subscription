@@ -1,6 +1,7 @@
 package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.common_data.model.enums.OutboxStatus;
+import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
 import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import com.yurupari.subscription_service.model.mapper.OutboxEventMapperImpl;
 import com.yurupari.subscription_service.repository.OutboxEventRepository;
@@ -34,8 +35,9 @@ class OutboxEventServiceImplTest {
     void saveOutboxEvent() {
         var outboxEvent = TestModelFactory.buildOutboxEvent(
                 1L,
+                OutboxAggregateType.SUBSCRIPTION,
                 1L,
-                "eventType",
+                OutboxEventType.NEWSLETTER_SUBSCRIBED,
                 "payload",
                 OutboxStatus.PENDING,
                 0,

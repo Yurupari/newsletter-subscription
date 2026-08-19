@@ -10,6 +10,8 @@ import com.yurupari.subscription_service.model.entity.Newsletter;
 import com.yurupari.subscription_service.model.entity.OptIn;
 import com.yurupari.subscription_service.model.entity.OutboxEvent;
 import com.yurupari.subscription_service.model.entity.UserSubscription;
+import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
+import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
 import com.yurupari.subscription_service.model.http.request.NewsletterRequest;
 import com.yurupari.subscription_service.model.http.request.SubscriptionRequest;
@@ -187,8 +189,9 @@ public class TestModelFactory {
 
     public static OutboxEvent buildOutboxEvent(
             Long id,
+            OutboxAggregateType aggregateType,
             Long aggregateId,
-            String eventType,
+            OutboxEventType eventType,
             String payload,
             OutboxStatus status,
             Integer retryCount,
@@ -197,6 +200,7 @@ public class TestModelFactory {
     ) {
         return OutboxEvent.builder()
                 .id(id)
+                .aggregateType(aggregateType)
                 .aggregateId(aggregateId)
                 .eventType(eventType)
                 .payload(payload)
@@ -209,16 +213,18 @@ public class TestModelFactory {
 
     public static OutboxEventDto buildOutboxEventDto(
             Long id,
+            OutboxAggregateType aggregateType,
             Long aggregateId,
-            String eventType,
+            OutboxEventType eventType,
             String payload,
-            String status,
+            OutboxStatus status,
             Integer retryCount,
-            String createdAt,
-            String processedAt
+            Instant createdAt,
+            Instant processedAt
     ) {
         return OutboxEventDto.builder()
                 .id(id)
+                .aggregateType(aggregateType)
                 .aggregateId(aggregateId)
                 .eventType(eventType)
                 .payload(payload)

@@ -1,6 +1,8 @@
 package com.yurupari.subscription_service.model.entity;
 
 import com.yurupari.common_data.model.enums.OutboxStatus;
+import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
+import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,15 +38,19 @@ public class OutboxEvent {
     @EqualsAndHashCode.Include
     private Long id;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     @Builder.Default
-    private String aggregateType = "SUBSCRIPTION";
+    private OutboxAggregateType aggregateType = OutboxAggregateType.SUBSCRIPTION;
 
     @Column(nullable = false)
     private Long aggregateId;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
-    private String eventType;
+    private OutboxEventType eventType;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
