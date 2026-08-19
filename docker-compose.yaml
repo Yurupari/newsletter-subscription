@@ -1,0 +1,210 @@
+
+services:
+  postgres:
+    image: postgres:17-trixie
+    container_name: ns-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db-data:/var/lib/postgresql
+      - db-logs:/var/log/postgresql
+
+  keycloak-db:
+    image: postgres:17-trixie
+    container_name: ns-keycloak-postgres
+    environment:
+      - POSTGRES_DB=${KEYCLOAK_DB_NAME}
+      - POSTGRES_USER=${KEYCLOAK_DB_USER}
+      - POSTGRES_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - ./volume-data/postgresql_keycloak_data:/var/lib/postgresql
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: ns-keycloak
+    command: [ "start-dev", "--import-realm" ]
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USER}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+    volumes:
+      - ./docker/keycloak/realms/:/opt/keycloak/data/import/
+    depends_on:
+      - keycloak-db
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: ns-kafka
+    restart: always
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID}
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_NUM_PARTITIONS=1
+    ports:
+      - "${KAFKA_PORT_INTERNAL}:9092"
+      - "${KAFKA_PORT_EXTERNAL}:9094"
+    volumes:
+      - ./docker/kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: ns-kafka-ui
+    restart: unless-stopped
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - DYNAMIC_CONFIG_ENABLED=true
+    ports:
+      - "${KAFKA_UI_PORT}:8080"
+    depends_on:
+      - kafka
+
+  wiremock:
+    image: wiremock/wiremock:latest
+    container_name: ns-wiremock
+    command:
+      - "--global-response-templating"
+      - "--verbose"
+    ports:
+      - "${WIREMOCK_PORT}:8080"
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings
+
+  user-service:
+    build:
+      context: .
+      dockerfile: ./user-service/src/main/docker/Dockerfile
+    container_name: ns-user-service
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY}
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "${USER_SERVICE_PORT}:8080"
+    depends_on:
+      - postgres
+      - keycloak
+      - kafka
+
+  subscription-service:
+    build:
+      context: .
+      dockerfile: ./subscription-service/src/main/docker/Dockerfile
+    container_name: ns-subscription-service
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - USER_SERVICE_URL=http://user-service:8080
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "${SUBSCRIPTION_SERVICE_PORT}:8081"
+    depends_on:
+      - postgres
+      - kafka
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./api-gateway/src/main/docker/Dockerfile
+    container_name: ns-api-gateway
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8081
+      - JWK_SET_URI=http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      - ISSUER_URI=http://keycloak:8080/realms/${KEYCLOAK_REALM}
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "${API_GATEWAY_PORT}:9000"
+    depends_on:
+      - keycloak
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./notification-service/src/main/docker/Dockerfile
+    container_name: ns-notification-service
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:8081
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+      - EMAIL_SERVICE_URL=http://wiremock:8080
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:8082"
+    depends_on:
+      - kafka
+      - wiremock
+
+  cpd-service:
+    build:
+      context: .
+      dockerfile: ./cpd-service/src/main/docker/Dockerfile
+    container_name: ns-cpd-service
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+      - CPD_URL=${CPD_URL}
+      - CPD_WRITE_KEY=${CPD_WRITE_KEY}
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "${CPD_SERVICE_PORT}:8083"
+    depends_on:
+      - kafka
+
+volumes:
+  db-data:
+  db-logs:

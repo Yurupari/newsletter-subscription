@@ -1,0 +1,28 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    template:
+      default-topic: cpd-notification
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        spring.json.type.mapping: cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
+    consumer:
+      group-id: user-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.type.mapping: cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
+        spring.json.trusted.packages: com.yurupari.*
+        spring.json.use.type.headers: true
+
+services:
+  cpd:
+    url: http://localhost:5000
+    write-key: test-key

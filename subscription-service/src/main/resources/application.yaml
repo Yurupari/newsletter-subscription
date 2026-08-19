@@ -1,0 +1,65 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: subscription-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER}:${KAFKA_EXTERNAL_PORT}
+    template:
+      default-topic: confirm-subscription
+    topics:
+      confirm-subscription: confirm-subscription
+      cpd: cpd-notification
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
+
+resilience4j:
+  retry:
+    instances:
+      userService:
+        max-attempts: 3
+        wait-duration: 100ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.io.IOException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
+
+services:
+  user-service:
+    url: ${USER_SERVICE_URL}
+
+token:
+  valid-time: 3600
+
+templates:
+  base-path: /templates/
+  files:
+    NEWSLETTER_SUBSCRIBED: subscription_properties.txt
+    NEWSLETTER_UNSUBSCRIBED: unsubscription_properties.txt
