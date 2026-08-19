@@ -403,6 +403,52 @@ class SubscriptionServiceApplicationTests extends PostgreSQLTestcontainerBase {
 	}
 
 	@Test
+	void confirmSubscription_Fail_TokenExpired() throws Exception {
+		var userSubscription = userSubscriptionRepository.saveAndFlush(TestModelFactory.buildUserSubscription(
+				null,
+				1L,
+				1L,
+				SubscriptionStatus.PENDING_CONFIRMATION,
+				null,
+				null
+		));
+		var optIn = optInRepository.saveAndFlush(TestModelFactory.buildOptIn(
+				null,
+				userSubscription.getId(),
+				UUID.randomUUID().toString(),
+				Instant.now().minusSeconds(3600)
+		));
+
+		mockMvc.perform(post("/api/v1/subscription/confirm")
+						.param("token", optIn.getToken()))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void confirmSubscription_Fail_TokenAlreadyUsed() throws Exception {
+		var userSubscription = userSubscriptionRepository.saveAndFlush(TestModelFactory.buildUserSubscription(
+				null,
+				1L,
+				1L,
+				SubscriptionStatus.CONFIRMED,
+				null,
+				null
+		));
+		var optIn = optInRepository.saveAndFlush(TestModelFactory.buildOptIn(
+				null,
+				userSubscription.getId(),
+				UUID.randomUUID().toString(),
+				Instant.now().plusSeconds(3600)
+		));
+		optIn.setUsedAt(Instant.now());
+		optInRepository.saveAndFlush(optIn);
+
+		mockMvc.perform(post("/api/v1/subscription/confirm")
+						.param("token", optIn.getToken()))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
 	void deleteSubscription_Success() throws Exception {
 		var userSubscription = userSubscriptionRepository.saveAndFlush(TestModelFactory.buildUserSubscription(
 				null,
@@ -416,8 +462,9 @@ class SubscriptionServiceApplicationTests extends PostgreSQLTestcontainerBase {
 		mockMvc.perform(delete("/api/v1/subscription/user/1/subscription/" + userSubscription.getId()))
 				.andExpect(status().isNoContent());
 
-		var updatedSubscription = userSubscriptionRepository.findById(userSubscription.getId()).get();
-		assertEquals(SubscriptionStatus.UNSUBSCRIBED, updatedSubscription.getStatus());
+		var updatedSubscription = userSubscriptionRepository.findById(userSubscription.getId());
+		assertTrue(updatedSubscription.isPresent());
+		assertEquals(SubscriptionStatus.UNSUBSCRIBED, updatedSubscription.get().getStatus());
 	}
 
 	@Test

@@ -2,10 +2,8 @@ package com.yurupari.subscription_service.model.mapper;
 
 import com.yurupari.common_data.config.CentralMapperConfig;
 import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
-import com.yurupari.common_data.kafka.event.UnsubscribeEvent;
 import com.yurupari.subscription_service.model.dto.UserSubscriptionDto;
 import com.yurupari.subscription_service.model.entity.UserSubscription;
-import com.yurupari.subscription_service.model.http.response.SubscriptionResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
@@ -23,7 +21,4 @@ public interface UserSubscriptionMapper {
 
     @Mapping(target = "subscriptionId", source = "userSubscription.id")
     ConfirmSubscriptionEvent toConfirmSubscriptionEvent(UserSubscription userSubscription);
-
-    @Mapping(target = "subscriptionId", source = "userSubscription.id")
-    UnsubscribeEvent toUnsubscribeEvent(UserSubscription userSubscription);
 }

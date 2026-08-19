@@ -1,7 +1,7 @@
 package com.yurupari.subscription_service.messaging.kafka;
 
+import com.yurupari.common_data.kafka.event.CPDEvent;
 import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
-import com.yurupari.common_data.kafka.event.UnsubscribeEvent;
 import com.yurupari.subscription_service.utils.TestModelFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,22 +31,24 @@ class SubscriptionProducerTest {
     private KafkaTemplate<String, Object> kafkaTemplate;
 
     private ConfirmSubscriptionEvent confirmSubscriptionEvent;
-    private UnsubscribeEvent unsubscribeEvent;
+    private CPDEvent CPDEvent;
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(subscriptionProducer, "confirmSubscriptionTopic", "confirm-subscription");
-        ReflectionTestUtils.setField(subscriptionProducer, "unsubscribeTopic", "unsubscribe");
+        ReflectionTestUtils.setField(subscriptionProducer, "cpdTopic", "cpd-notification");
 
-        confirmSubscriptionEvent = TestModelFactory.createRegisterUserEvent(
+        confirmSubscriptionEvent = TestModelFactory.buildRegisterUserEvent(
                 1L,
                 1L,
                 1L
         );
-        unsubscribeEvent = TestModelFactory.createDeleteUserEvent(
+        CPDEvent = TestModelFactory.buildCPDEvent(
                 1L,
+                "testEventType",
+                "testSource",
                 1L,
-                1L
+                "testProperties"
         );
     }
 
@@ -71,21 +73,21 @@ class SubscriptionProducerTest {
     }
 
     @Test
-    void produceUnsubscribeEvent_Sent() {
+    void produceCPDEvent_Sent() {
         when(kafkaTemplate.send(anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        assertDoesNotThrow(() -> subscriptionProducer.produceUnsubscribeEvent(unsubscribeEvent));
+        assertDoesNotThrow(() -> subscriptionProducer.produceCPDEvent(CPDEvent));
 
         verify(kafkaTemplate, times(1)).send(anyString(), anyString(), any());
     }
 
     @Test
-    void produceUnsubscribeEvent_NotSent() {
+    void produceCPDEvent_NotSent() {
         when(kafkaTemplate.send(anyString(), anyString(), any()))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Kafka connection timeout")));
 
-        assertDoesNotThrow(() -> subscriptionProducer.produceUnsubscribeEvent(unsubscribeEvent));
+        assertDoesNotThrow(() -> subscriptionProducer.produceCPDEvent(CPDEvent));
 
         verify(kafkaTemplate, times(1)).send(anyString(), anyString(), any());
     }

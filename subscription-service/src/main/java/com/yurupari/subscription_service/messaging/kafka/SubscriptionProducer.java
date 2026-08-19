@@ -1,7 +1,7 @@
 package com.yurupari.subscription_service.messaging.kafka;
 
 import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
-import com.yurupari.common_data.kafka.event.UnsubscribeEvent;
+import com.yurupari.common_data.kafka.event.CPDEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +20,11 @@ public class SubscriptionProducer {
     @Value("${spring.kafka.topics.confirm-subscription}")
     private String confirmSubscriptionTopic;
 
-    @Value("${spring.kafka.topics.unsubscribe}")
-    private String unsubscribeTopic;
+    @Value("${spring.kafka.topics.cpd}")
+    private String cpdTopic;
 
     public void produceConfirmSubscriptionEvent(ConfirmSubscriptionEvent confirmSubscriptionEvent) {
-        log.info("Producing confirm subscription event: event={}", confirmSubscriptionEvent);
+        log.info("Producing confirm subscription: event={}", confirmSubscriptionEvent);
 
         kafkaTemplate.send(
                 confirmSubscriptionTopic,
@@ -40,19 +40,19 @@ public class SubscriptionProducer {
                 );
     }
 
-    public void produceUnsubscribeEvent(UnsubscribeEvent unsubscribeEvent) {
-        log.info("Producing unsubscribe event: event={}", unsubscribeEvent);
+    public void produceCPDEvent(CPDEvent cpdEvent) {
+        log.info("Producing CPD notification: event={}", cpdEvent);
 
         kafkaTemplate.send(
-                unsubscribeTopic,
-                unsubscribeEvent.subscriptionId().toString(),
-                unsubscribeEvent)
+                cpdTopic,
+                cpdEvent.outboxId().toString(),
+                cpdEvent)
                 .whenComplete((result, ex) ->
                         Optional.ofNullable(ex).ifPresentOrElse(
-                                e -> log.error("Unable to send Unsubscribe Event: error={}",
+                                e -> log.error("Unable to send CPD notification: error={}",
                                         e.getMessage()),
-                                () -> log.info("Sent Unsubscribe Event: userId={}",
-                                        unsubscribeEvent.subscriptionId())
+                                () -> log.info("Sent CPD notification: userId={}",
+                                        cpdEvent.eventType())
                         )
                 );;
     }

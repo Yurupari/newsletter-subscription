@@ -21,8 +21,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
@@ -79,17 +81,21 @@ class NewsletterServiceImplTest {
         var response = newsletterService.getNewsletterById(1L);
 
         assertNotNull(response);
-        assertEquals(newsletter.getId(), response.id());
-        assertEquals(newsletter.getTitle(), response.title());
-        assertEquals(newsletter.getDescription(), response.description());
-        assertEquals(newsletter.getIsActive(), response.isActive());
+        assertTrue(response.isPresent());
+        assertEquals(newsletter.getId(), response.get().id());
+        assertEquals(newsletter.getTitle(), response.get().title());
+        assertEquals(newsletter.getDescription(), response.get().description());
+        assertEquals(newsletter.getIsActive(), response.get().isActive());
     }
 
     @Test
     void getNewslettersById_NotFound() {
         when(newsletterRepository.findByIdAndIsActive(any(), anyBoolean())).thenReturn(Optional.empty());
 
-        assertThrows(NewsletterNotFoundException.class, () -> newsletterService.getNewsletterById(1L));
+        var response = newsletterService.getNewsletterById(1L);
+
+        assertNotNull(response);
+        assertFalse(response.isPresent());
     }
 
     @Test

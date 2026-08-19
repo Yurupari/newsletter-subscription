@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,13 +34,11 @@ public class NewsletterServiceImpl implements NewsletterService {
     }
 
     @Override
-    public NewsletterDto getNewsletterById(Long id) {
+    public Optional<NewsletterDto> getNewsletterById(Long id) {
         log.info("Getting newsletter: id={}", id);
 
-        final var newsletter = newsletterRepository.findByIdAndIsActive(id, true)
-                .orElseThrow(() -> new NewsletterNotFoundException(id));
-
-        return newsletterMapper.toDto(newsletter);
+        return newsletterRepository.findByIdAndIsActive(id, true)
+                .map(newsletterMapper::toDto);
     }
 
     @Override

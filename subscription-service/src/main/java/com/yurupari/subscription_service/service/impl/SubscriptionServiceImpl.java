@@ -2,6 +2,8 @@ package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
 import com.yurupari.subscription_service.client.UserServiceClient;
+import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
+import com.yurupari.subscription_service.exception.UserSubscriptionAlreadyUnsubscribedException;
 import com.yurupari.subscription_service.exception.UserSubscriptionExistsException;
 import com.yurupari.subscription_service.exception.UserSubscriptionNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
@@ -13,6 +15,7 @@ import com.yurupari.subscription_service.model.http.request.SubscriptionRequest;
 import com.yurupari.subscription_service.model.http.response.SubscriptionResponse;
 import com.yurupari.subscription_service.model.mapper.UserSubscriptionMapper;
 import com.yurupari.subscription_service.repository.UserSubscriptionRepository;
+import com.yurupari.subscription_service.service.CPDService;
 import com.yurupari.subscription_service.service.NewsletterService;
 import com.yurupari.subscription_service.service.OptInService;
 import com.yurupari.subscription_service.service.SubscriptionService;
@@ -35,6 +38,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final NewsletterService newsletterService;
 
     private final OptInService optInService;
+
+    private final CPDService cpdService;
 
     private final SubscriptionProducer subscriptionProducer;
 
@@ -98,10 +103,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         var userSubscription = userSubscriptionRepository.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new UserSubscriptionNotFoundException(subscriptionId));
 
+        if (SubscriptionStatus.UNSUBSCRIBED.equals(userSubscription.getStatus())) {
+            throw new UserSubscriptionAlreadyUnsubscribedException(subscriptionId);
+        }
+
+        var isDoubleOptInConfirmed = SubscriptionStatus.CONFIRMED.equals(userSubscription.getStatus());
+
         userSubscription.setStatus(SubscriptionStatus.UNSUBSCRIBED);
         var updatedSubscription = userSubscriptionRepository.saveAndFlush(userSubscription);
 
-        subscriptionProducer.produceUnsubscribeEvent(userSubscriptionMapper.toUnsubscribeEvent(updatedSubscription));
+        cpdService.sendUnsubscriptionCPDNotification(
+                updatedSubscription.getUserId(),
+                updatedSubscription.getNewsletterId(),
+                isDoubleOptInConfirmed
+        );
     }
 
     private SubscriptionResponse processPendingSubscription(
@@ -116,7 +131,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new UserSubscriptionExistsException(userId, subscriptionRequest.newsletterId());
         }
 
-        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId())
+                .orElseThrow(() -> new NewsletterNotFoundException(subscriptionRequest.newsletterId()));
 
         var newOptIn = optInService.createOptIn(existingSubscription.getId());
 
@@ -137,7 +153,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             SubscriptionRequest subscriptionRequest,
             UserSubscription existingSubscription
     ) {
-        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId())
+                .orElseThrow(() -> new NewsletterNotFoundException(subscriptionRequest.newsletterId()));
 
         existingSubscription.setStatus(SubscriptionStatus.PENDING_CONFIRMATION);
         userSubscriptionRepository.saveAndFlush(existingSubscription);
@@ -160,7 +177,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             Long userId,
             SubscriptionRequest subscriptionRequest
     ) {
-        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId());
+        final var newsletter = newsletterService.getNewsletterById(subscriptionRequest.newsletterId())
+                .orElseThrow(() -> new NewsletterNotFoundException(subscriptionRequest.newsletterId()));
 
         var newUserSubscription = UserSubscription.builder()
                 .userId(userId)
@@ -202,6 +220,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     if (SubscriptionStatus.PENDING_CONFIRMATION.equals(userSubscription.getStatus())) {
                         userSubscription.setStatus(SubscriptionStatus.CONFIRMED);
                         userSubscriptionRepository.saveAndFlush(userSubscription);
+
+                        cpdService.sendSubscriptionCPDNotification(
+                                userSubscription.getUserId(),
+                                userSubscription.getNewsletterId(),
+                                true);
                     } else {
                         log.warn("Subscription cannot be confirmed: subscriptionId={}, status={}",
                                 subscriptionId, userSubscription.getStatus());

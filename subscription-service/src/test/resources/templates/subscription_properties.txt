@@ -1,0 +1,11 @@
+{
+  "newsletterId": "%s",
+  "newsletterName": "%s",
+  "doubleOptInConfirmed": %s,
+  "optInTimestamp": "%s",
+  "consent": {
+    "type": "newsletter_email",
+    "status": "%s",
+    "revocable": true
+  }
+}

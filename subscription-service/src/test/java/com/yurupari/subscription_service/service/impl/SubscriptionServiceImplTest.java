@@ -2,12 +2,14 @@ package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.subscription_service.client.UserServiceClient;
 import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
+import com.yurupari.subscription_service.exception.UserSubscriptionAlreadyUnsubscribedException;
 import com.yurupari.subscription_service.exception.UserSubscriptionExistsException;
 import com.yurupari.subscription_service.exception.UserSubscriptionNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
 import com.yurupari.subscription_service.model.mapper.UserSubscriptionMapperImpl;
 import com.yurupari.subscription_service.repository.UserSubscriptionRepository;
+import com.yurupari.subscription_service.service.CPDService;
 import com.yurupari.subscription_service.service.NewsletterService;
 import com.yurupari.subscription_service.service.OptInService;
 import com.yurupari.subscription_service.utils.TestModelFactory;
@@ -23,10 +25,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -50,6 +54,9 @@ class SubscriptionServiceImplTest {
 
     @Mock
     private OptInService optInService;
+
+    @Mock
+    private CPDService cpdService;
 
     @Mock
     private SubscriptionProducer subscriptionProducer;
@@ -103,7 +110,7 @@ class SubscriptionServiceImplTest {
                 "description",
                 true
         );
-        when(newsletterService.getNewsletterById(anyLong())).thenReturn(newsletter);
+        when(newsletterService.getNewsletterById(anyLong())).thenReturn(Optional.of(newsletter));
 
         var userSubscription = TestModelFactory.buildUserSubscription(
                 1L,
@@ -173,7 +180,7 @@ class SubscriptionServiceImplTest {
                 "description",
                 true
         );
-        when(newsletterService.getNewsletterById(anyLong())).thenReturn(newsletter);
+        when(newsletterService.getNewsletterById(anyLong())).thenReturn(Optional.of(newsletter));
 
         var newOptIn = TestModelFactory.buildOptInDto(
                 1L,
@@ -224,7 +231,7 @@ class SubscriptionServiceImplTest {
                 "description",
                 true
         );
-        when(newsletterService.getNewsletterById(anyLong())).thenReturn(newsletter);
+        when(newsletterService.getNewsletterById(anyLong())).thenReturn(Optional.of(newsletter));
 
         var optIn = TestModelFactory.buildOptInDto(
                 1L,
@@ -399,7 +406,7 @@ class SubscriptionServiceImplTest {
                 1L,
                 1L,
                 1L,
-                null,
+                SubscriptionStatus.CONFIRMED,
                 null,
                 null
         );
@@ -408,12 +415,42 @@ class SubscriptionServiceImplTest {
 
         when(userSubscriptionRepository.saveAndFlush(any())).thenReturn(userSubscription);
 
-        doNothing().when(subscriptionProducer).produceUnsubscribeEvent(any());
+        doNothing().when(cpdService).sendUnsubscriptionCPDNotification(anyLong(), anyLong(), anyBoolean());
 
-        subscriptionService.deleteSubscription(1L, 1L);
+        assertDoesNotThrow(() ->subscriptionService.deleteSubscription(1L, 1L));
 
         verify(userSubscriptionRepository, times(1)).saveAndFlush(any());
-        verify(subscriptionProducer, times(1)).produceUnsubscribeEvent(any());
+        verify(cpdService, times(1))
+                .sendUnsubscriptionCPDNotification(anyLong(), anyLong(), anyBoolean());
+    }
+
+    @Test
+    void deleteSubscription_Fail_AlreadyUnsubscribed() {
+        var user = TestModelFactory.buildUser(
+                1L,
+                "email",
+                "firstName",
+                "lastName"
+        );
+        when(userServiceClient.getUser(anyLong())).thenReturn(user);
+
+        var userSubscription = TestModelFactory.buildUserSubscription(
+                1L,
+                1L,
+                1L,
+                SubscriptionStatus.UNSUBSCRIBED,
+                null,
+                null
+        );
+        when(userSubscriptionRepository.findByIdAndUserId(anyLong(), anyLong()))
+                .thenReturn(Optional.of(userSubscription));
+
+        assertThrows(UserSubscriptionAlreadyUnsubscribedException.class,
+                () ->subscriptionService.deleteSubscription(1L, 1L));
+
+        verify(userSubscriptionRepository, never()).saveAndFlush(any());
+        verify(cpdService, never())
+                .sendUnsubscriptionCPDNotification(anyLong(), anyLong(), anyBoolean());
     }
 
     @Test
@@ -424,25 +461,6 @@ class SubscriptionServiceImplTest {
                 () -> subscriptionService.deleteSubscription(1L, 1L));
 
         verify(userSubscriptionRepository, never()).saveAndFlush(any());
-        verify(subscriptionProducer, never()).produceUnsubscribeEvent(any());
-    }
-
-    @Test
-    void deleteSubscription_Fail_SubscriptionNotFound() {
-        var user = TestModelFactory.buildUser(
-                1L,
-                "email",
-                "firstName",
-                "lastName"
-        );
-        when(userServiceClient.getUser(anyLong())).thenReturn(user);
-
-        when(userSubscriptionRepository.findByIdAndUserId(anyLong(), anyLong())).thenReturn(Optional.empty());
-
-        assertThrows(UserSubscriptionNotFoundException.class,
-                () -> subscriptionService.deleteSubscription(1L, 1L));
-
-        verify(userSubscriptionRepository, never()).saveAndFlush(any());
-        verify(subscriptionProducer, never()).produceUnsubscribeEvent(any());
+        verify(subscriptionProducer, never()).produceCPDEvent(any());
     }
 }

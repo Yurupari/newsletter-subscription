@@ -1,11 +1,14 @@
 package com.yurupari.subscription_service.utils;
 
 import com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent;
-import com.yurupari.common_data.kafka.event.UnsubscribeEvent;
+import com.yurupari.common_data.kafka.event.CPDEvent;
+import com.yurupari.common_data.model.enums.OutboxStatus;
 import com.yurupari.subscription_service.model.dto.NewsletterDto;
 import com.yurupari.subscription_service.model.dto.OptInDto;
+import com.yurupari.subscription_service.model.dto.OutboxEventDto;
 import com.yurupari.subscription_service.model.entity.Newsletter;
 import com.yurupari.subscription_service.model.entity.OptIn;
+import com.yurupari.subscription_service.model.entity.OutboxEvent;
 import com.yurupari.subscription_service.model.entity.UserSubscription;
 import com.yurupari.subscription_service.model.enums.SubscriptionStatus;
 import com.yurupari.subscription_service.model.http.request.NewsletterRequest;
@@ -147,7 +150,7 @@ public class TestModelFactory {
                 .build();
     }
 
-    public static ConfirmSubscriptionEvent createRegisterUserEvent(
+    public static ConfirmSubscriptionEvent buildRegisterUserEvent(
             Long subscriptionId,
             Long userId,
             Long newsletterId
@@ -159,15 +162,19 @@ public class TestModelFactory {
                 .build();
     }
 
-    public static UnsubscribeEvent createDeleteUserEvent(
-            Long subscriptionId,
-            Long userId,
-            Long newsletterId
+    public static CPDEvent buildCPDEvent(
+            Long outboxId,
+            String eventType,
+            String source,
+            Long aggregateId,
+            String properties
     ) {
-        return UnsubscribeEvent.builder()
-                .subscriptionId(subscriptionId)
-                .userId(userId)
-                .newsletterId(newsletterId)
+        return CPDEvent.builder()
+                .outboxId(outboxId)
+                .eventType(eventType)
+                .source(source)
+                .aggregateId(aggregateId)
+                .properties(properties)
                 .build();
     }
 
@@ -175,6 +182,50 @@ public class TestModelFactory {
         return NewsletterRequest.builder()
                 .title(title)
                 .description(description)
+                .build();
+    }
+
+    public static OutboxEvent buildOutboxEvent(
+            Long id,
+            Long aggregateId,
+            String eventType,
+            String payload,
+            OutboxStatus status,
+            Integer retryCount,
+            Instant createdAt,
+            Instant processedAt
+    ) {
+        return OutboxEvent.builder()
+                .id(id)
+                .aggregateId(aggregateId)
+                .eventType(eventType)
+                .payload(payload)
+                .status(status)
+                .retryCount(retryCount)
+                .createdAt(createdAt)
+                .processedAt(processedAt)
+                .build();
+    }
+
+    public static OutboxEventDto buildOutboxEventDto(
+            Long id,
+            Long aggregateId,
+            String eventType,
+            String payload,
+            String status,
+            Integer retryCount,
+            String createdAt,
+            String processedAt
+    ) {
+        return OutboxEventDto.builder()
+                .id(id)
+                .aggregateId(aggregateId)
+                .eventType(eventType)
+                .payload(payload)
+                .status(status)
+                .retryCount(retryCount)
+                .createdAt(createdAt)
+                .processedAt(processedAt)
                 .build();
     }
 }

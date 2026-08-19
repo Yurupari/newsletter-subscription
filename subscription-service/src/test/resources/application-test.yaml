@@ -15,7 +15,7 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: true
-        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,unsubscribeEvent:com.yurupari.common_data.kafka.event.UnsubscribeEvent
+        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
 
 services:
   user-service:
@@ -23,3 +23,9 @@ services:
 
 token:
   valid-time: 3600
+
+templates:
+  base-path: /templates/
+  files:
+    NEWSLETTER_SUBSCRIBED: subscription_properties.txt
+    NEWSLETTER_UNSUBSCRIBED: unsubscription_properties.txt

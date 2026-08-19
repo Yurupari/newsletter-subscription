@@ -1,0 +1,9 @@
+{
+  "newsletterId": "%s",
+  "newsletterName": "%s",
+  "doubleOptInConfirmed": %s,
+  "consent": {
+    "type": "newsletter_email",
+    "status": "%s"
+  }
+}

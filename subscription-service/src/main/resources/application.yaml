@@ -27,13 +27,13 @@ spring:
       default-topic: confirm-subscription
     topics:
       confirm-subscription: confirm-subscription
-      unsubscribe: unsubscribe
+      cpd: cpd-notification
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: true
-        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,unsubscribeEvent:com.yurupari.common_data.kafka.event.UnsubscribeEvent
+        spring.json.type.mapping: confirmSubscriptionEvent:com.yurupari.common_data.kafka.event.ConfirmSubscriptionEvent,cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
 
 resilience4j:
   retry:
@@ -57,3 +57,9 @@ services:
 
 token:
   valid-time: 3600
+
+templates:
+  base-path: /templates/
+  files:
+    NEWSLETTER_SUBSCRIBED: subscription_properties.txt
+    NEWSLETTER_UNSUBSCRIBED: unsubscription_properties.txt
