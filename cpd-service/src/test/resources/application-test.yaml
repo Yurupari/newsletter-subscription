@@ -6,6 +6,12 @@ spring:
     bootstrap-servers: ${spring.embedded.kafka.brokers}
     template:
       default-topic: cpd-notification
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: true
+        spring.json.type.mapping: cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
     consumer:
       group-id: user-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer

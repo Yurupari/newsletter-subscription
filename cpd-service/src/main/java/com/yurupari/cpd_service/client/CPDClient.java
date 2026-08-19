@@ -8,7 +8,7 @@ import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 
 @HttpExchange(accept = {MediaType.APPLICATION_JSON_VALUE})
-public interface CpdClient {
+public interface CPDClient {
 
     @PostExchange("/identify")
     void identify(@RequestBody IdentifyPayload payload);

@@ -1,6 +1,6 @@
 package com.yurupari.cpd_service.config;
 
-import com.yurupari.cpd_service.client.CpdClient;
+import com.yurupari.cpd_service.client.CPDClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,7 +36,7 @@ public class HttpClientConfig {
     private String cpdWriteKey;
 
     @Bean
-    public CpdClient cpdClient() {
+    public CPDClient cpdClient() {
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(3));
         requestFactory.setReadTimeout(Duration.ofSeconds(10));
@@ -68,6 +68,6 @@ public class HttpClientConfig {
         return HttpServiceProxyFactory
                 .builderFor(RestClientAdapter.create(restClient))
                 .build()
-                .createClient(CpdClient.class);
+                .createClient(CPDClient.class);
     }
 }

@@ -1,7 +1,7 @@
 package com.yurupari.cpd_service.service.impl;
 
 import com.yurupari.common_data.kafka.event.CPDEvent;
-import com.yurupari.cpd_service.client.CpdClient;
+import com.yurupari.cpd_service.client.CPDClient;
 import com.yurupari.cpd_service.model.dto.IdentifyPayload;
 import com.yurupari.cpd_service.model.dto.TrackPayload;
 import com.yurupari.cpd_service.model.enums.OutboxEventType;
@@ -22,7 +22,7 @@ public class CPDServiceImpl implements CPDService {
 
     private final OutboxEventService outboxEventService;
 
-    private final CpdClient cpdClient;
+    private final CPDClient cpdClient;
 
     @Override
     @Retry(name = "cdp", fallbackMethod = "handleCdpFailure")
