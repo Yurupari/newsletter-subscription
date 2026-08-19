@@ -34,3 +34,24 @@ spring:
         spring.json.type.mapping: cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
         spring.json.trusted.packages: com.yurupari.*
         spring.json.use.type.headers: true
+
+resilience4j:
+  retry:
+    instances:
+      cdp:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.io.IOException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
+
+services:
+  cpd:
+    url: ${CPD_URL}
+    write-key: ${CPD_WRITE_KEY}

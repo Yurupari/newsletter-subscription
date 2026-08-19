@@ -9,6 +9,7 @@ spring:
     topics:
       register-user: register-user
       delete-user: delete-user
+      cpd: cpd-notification
     consumer:
       group-id: user-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -23,7 +24,7 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: true
-        spring.json.type.mapping: registerUserEvent:com.yurupari.user_service.kafka.event.RegisterUserEvent,deleteUserEvent:com.yurupari.user_service.kafka.event.DeleteUserEvent
+        spring.json.type.mapping: registerUserEvent:com.yurupari.user_service.kafka.event.RegisterUserEvent,deleteUserEvent:com.yurupari.user_service.kafka.event.DeleteUserEvent,cpdEvent:com.yurupari.common_data.kafka.event.CPDEvent
 
 encryption:
   algorithm: AES/GCM/NoPadding

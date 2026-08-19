@@ -19,6 +19,7 @@ import com.yurupari.subscription_service.model.http.response.SubscriptionRespons
 import com.yurupari.subscription_service.model.http.response.UserResponse;
 
 import java.time.Instant;
+import java.util.Map;
 
 public class TestModelFactory {
 
@@ -169,7 +170,7 @@ public class TestModelFactory {
             String eventType,
             String source,
             Long aggregateId,
-            String properties
+            Map<String, String> properties
     ) {
         return CPDEvent.builder()
                 .outboxId(outboxId)

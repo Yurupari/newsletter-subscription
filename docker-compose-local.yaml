@@ -108,7 +108,7 @@ services:
       - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
       - KEYCLOAK_REALM=ns-security-realm
       - KEYCLOAK_CLIENT_ID=newsletter-subscription-client
-      - KEYCLOAK_CLIENT_SECRET=mM7dYSCd1jLZqry8PRtgPKLw3TijszQA
+      - KEYCLOAK_CLIENT_SECRET=AC3LmZRETUbvhVT37a8JCviAg7Tfv2z8
       - KAFKA_SERVER=kafka
       - KAFKA_EXTERNAL_PORT=9092
     volumes:
@@ -180,6 +180,29 @@ services:
     depends_on:
       - kafka
       - wiremock
+
+  cpd-service:
+    build:
+      context: .
+      dockerfile: ./cpd-service/src/main/docker/Dockerfile
+    container_name: ns-cpd-service
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=newsletter_subscription
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - KAFKA_SERVER=kafka
+      - KAFKA_EXTERNAL_PORT=9092
+      - CPD_URL=https://api.segment.io/v1
+      - CPD_WRITE_KEY=yurupari
+    volumes:
+      - ./logs/:/logs
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka
 
 volumes:
   db-data:

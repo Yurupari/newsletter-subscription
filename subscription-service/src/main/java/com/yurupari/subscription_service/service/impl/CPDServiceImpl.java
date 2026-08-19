@@ -1,8 +1,8 @@
 package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.common_data.kafka.event.CPDEvent;
-import com.yurupari.subscription_service.config.PropertiesPayloads;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
+import com.yurupari.subscription_service.model.dto.NewsletterDto;
 import com.yurupari.subscription_service.model.enums.ConsentType;
 import com.yurupari.subscription_service.model.enums.OutboxEventType;
 import com.yurupari.subscription_service.service.CPDService;
@@ -11,13 +11,10 @@ import com.yurupari.subscription_service.service.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StreamUtils;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,8 +27,6 @@ public class CPDServiceImpl implements CPDService {
 
     private final SubscriptionProducer subscriptionProducer;
 
-    private final PropertiesPayloads propertiesPayloads;
-
     @Value("${spring.application.name}")
     private String source;
 
@@ -41,18 +36,7 @@ public class CPDServiceImpl implements CPDService {
                 userId, newsletterId);
 
         newsletterService.getNewsletterById(newsletterId).ifPresent(
-                newsletter -> {
-                    var template = getPropertiesTemplate(OutboxEventType.NEWSLETTER_SUBSCRIBED);
-                    String properties = template.formatted(
-                            newsletterId,
-                            newsletter.title(),
-                            isDoubleOptInConfirmed,
-                            Instant.now(),
-                            ConsentType.GRANTED
-                    );
-
-                    sendEvent(userId, properties, OutboxEventType.NEWSLETTER_SUBSCRIBED);
-                }
+                newsletter -> sendEvent(userId, newsletter, OutboxEventType.NEWSLETTER_SUBSCRIBED)
         );
     }
 
@@ -62,36 +46,20 @@ public class CPDServiceImpl implements CPDService {
                 userId, newsletterId);
 
         newsletterService.getNewsletterById(newsletterId).ifPresent(
-                newsletter -> {
-                    var template = getPropertiesTemplate(OutboxEventType.NEWSLETTER_UNSUBSCRIBED);
-                    String properties = template.formatted(
-                            newsletterId,
-                            newsletter.title(),
-                            isDoubleOptInConfirmed,
-                            ConsentType.DENIED
-                    );
-
-                    sendEvent(userId, properties, OutboxEventType.NEWSLETTER_UNSUBSCRIBED);
-                }
+                newsletter -> sendEvent(userId, newsletter, OutboxEventType.NEWSLETTER_UNSUBSCRIBED)
         );
     }
 
-    private String getPropertiesTemplate(OutboxEventType outboxEventType) {
-        var fileName = propertiesPayloads.files().get(outboxEventType.name());
-        var filePath =propertiesPayloads.basePath() + fileName;
+    private void sendEvent(Long userId, NewsletterDto newsletter, OutboxEventType outboxEventType) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("userId", String.valueOf(userId));
+        payload.put("newsletterId", String.valueOf(newsletter.id()));
+        payload.put("newsletterTitle", newsletter.title());
+        payload.put("newsletterDescription", newsletter.description());
+        payload.put("optInDoubleConfirmed", String.valueOf(OutboxEventType.NEWSLETTER_SUBSCRIBED.equals(outboxEventType)));
+        payload.put("timestamp", Instant.now().toString());
+        payload.put("source", source);
 
-        try {
-            log.info("Loading properties template: property={}", outboxEventType);
-
-            var resource = new ClassPathResource(filePath);
-
-            return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void sendEvent(Long userId, String payload, OutboxEventType outboxEventType) {
         var outboxEvent = outboxEventService.saveOutboxEvent(
                 userId,
                 outboxEventType,

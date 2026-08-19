@@ -1,5 +1,6 @@
 package com.yurupari.user_service.messaging.kafka;
 
+import com.yurupari.common_data.kafka.event.CPDEvent;
 import com.yurupari.user_service.kafka.event.DeleteUserEvent;
 import com.yurupari.user_service.kafka.event.RegisterUserEvent;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,9 @@ public class UserProducer {
 
     @Value("${spring.kafka.topics.delete-user}")
     private String deleteUserTopic;
+
+    @Value("${spring.kafka.topics.cpd}")
+    private String cpdTopic;
 
     public void produceRegisterUserEvent(RegisterUserEvent registerUserEvent) {
         var key = String.valueOf(registerUserEvent.userId());
@@ -47,5 +51,22 @@ public class UserProducer {
                                 () -> log.info("Sent Delete User Event: userId={}", deleteUserEvent.userId())
                         )
                 );
+    }
+
+    public void produceCPDEvent(CPDEvent cpdEvent) {
+        log.info("Producing CPD notification: event={}", cpdEvent);
+
+        kafkaTemplate.send(
+                        cpdTopic,
+                        cpdEvent.outboxId().toString(),
+                        cpdEvent)
+                .whenComplete((result, ex) ->
+                        Optional.ofNullable(ex).ifPresentOrElse(
+                                e -> log.error("Unable to send CPD notification: error={}",
+                                        e.getMessage()),
+                                () -> log.info("Sent CPD notification: userId={}",
+                                        cpdEvent.eventType())
+                        )
+                );;
     }
 }

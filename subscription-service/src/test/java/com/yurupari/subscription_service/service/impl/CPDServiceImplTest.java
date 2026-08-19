@@ -1,8 +1,6 @@
 package com.yurupari.subscription_service.service.impl;
 
 import com.yurupari.common_data.model.enums.OutboxStatus;
-import com.yurupari.subscription_service.config.PropertiesPayloads;
-import com.yurupari.subscription_service.exception.NewsletterNotFoundException;
 import com.yurupari.subscription_service.messaging.kafka.SubscriptionProducer;
 import com.yurupari.subscription_service.model.enums.OutboxAggregateType;
 import com.yurupari.subscription_service.model.enums.OutboxEventType;
@@ -18,14 +16,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -46,9 +41,6 @@ class CPDServiceImplTest {
     @Mock
     private SubscriptionProducer subscriptionProducer;
 
-    @Mock
-    private PropertiesPayloads propertiesPayloads;
-
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(cpdService, "source", "subscription-service");
@@ -64,12 +56,6 @@ class CPDServiceImplTest {
         );
         when(newsletterService.getNewsletterById(anyLong())).thenReturn(Optional.of(newsletter));
 
-        var fileName = "subscription_properties.txt";
-        when(propertiesPayloads.files()).thenReturn(Map.of("NEWSLETTER_SUBSCRIBED", fileName));
-        
-        var fileBasePath = "/templates/";
-        when(propertiesPayloads.basePath()).thenReturn(fileBasePath);
-
         var outboxEvent = TestModelFactory.buildOutboxEventDto(
                 1L,
                 OutboxAggregateType.SUBSCRIPTION,
@@ -81,11 +67,11 @@ class CPDServiceImplTest {
                 Instant.now(),
                 null
         );
-        when(outboxEventService.saveOutboxEvent(anyLong(), any(), anyString())).thenReturn(outboxEvent);
+        when(outboxEventService.saveOutboxEvent(anyLong(), any(), any())).thenReturn(outboxEvent);
 
         assertDoesNotThrow(() -> cpdService.sendSubscriptionCPDNotification(1L, 1L, true));
 
-        verify(outboxEventService, times(1)).saveOutboxEvent(anyLong(), any(), anyString());
+        verify(outboxEventService, times(1)).saveOutboxEvent(anyLong(), any(), any());
     }
 
     @Test
@@ -94,7 +80,7 @@ class CPDServiceImplTest {
 
         assertDoesNotThrow(() -> cpdService.sendSubscriptionCPDNotification(1L, 1L, true));
 
-        verify(outboxEventService, never()).saveOutboxEvent(anyLong(), any(), anyString());;
+        verify(outboxEventService, never()).saveOutboxEvent(anyLong(), any(), any());;
     }
 
     @Test
@@ -107,12 +93,6 @@ class CPDServiceImplTest {
         );
         when(newsletterService.getNewsletterById(anyLong())).thenReturn(Optional.of(newsletter));
 
-        var fileName = "unsubscription_properties.txt";
-        when(propertiesPayloads.files()).thenReturn(Map.of("NEWSLETTER_UNSUBSCRIBED", fileName));
-
-        var fileBasePath = "/templates/";
-        when(propertiesPayloads.basePath()).thenReturn(fileBasePath);
-
         var outboxEvent = TestModelFactory.buildOutboxEventDto(
                 1L,
                 OutboxAggregateType.SUBSCRIPTION,
@@ -124,11 +104,11 @@ class CPDServiceImplTest {
                 Instant.now(),
                 null
         );
-        when(outboxEventService.saveOutboxEvent(anyLong(), any(), anyString())).thenReturn(outboxEvent);
+        when(outboxEventService.saveOutboxEvent(anyLong(), any(), any())).thenReturn(outboxEvent);
 
         assertDoesNotThrow(() -> cpdService.sendUnsubscriptionCPDNotification(1L, 1L, false));
 
-        verify(outboxEventService, times(1)).saveOutboxEvent(anyLong(), any(), anyString());
+        verify(outboxEventService, times(1)).saveOutboxEvent(anyLong(), any(), any());
     }
 
     @Test
@@ -137,6 +117,6 @@ class CPDServiceImplTest {
 
         assertDoesNotThrow(() -> cpdService.sendUnsubscriptionCPDNotification(1L, 1L, false));
 
-        verify(outboxEventService, never()).saveOutboxEvent(anyLong(), any(), anyString());
+        verify(outboxEventService, never()).saveOutboxEvent(anyLong(), any(), any());
     }
 }

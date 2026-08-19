@@ -12,8 +12,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,11 +30,16 @@ class OutboxEventServiceImplTest {
     @Mock
     private OutboxEventRepository outboxEventRepository;
 
+    @Mock
+    private ObjectMapper objectMapper;
+
     @Spy
     private OutboxEventMapperImpl outboxEventMapper = new OutboxEventMapperImpl();
 
     @Test
     void saveOutboxEvent() {
+        when(objectMapper.writeValueAsString(any())).thenReturn("payload");
+
         var outboxEvent = TestModelFactory.buildOutboxEvent(
                 1L,
                 OutboxAggregateType.SUBSCRIPTION,
@@ -46,10 +53,11 @@ class OutboxEventServiceImplTest {
         );
         when(outboxEventRepository.saveAndFlush(any())).thenReturn(outboxEvent);
 
+        Map<String, String> payload = Map.of("key", "value");
         var response = outboxEventService.saveOutboxEvent(
                 1L,
                 OutboxEventType.NEWSLETTER_SUBSCRIBED,
-                "payload"
+                payload
         );
 
         assertNotNull(response);

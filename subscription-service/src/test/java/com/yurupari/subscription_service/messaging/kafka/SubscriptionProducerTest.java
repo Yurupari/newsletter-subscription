@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -48,7 +49,7 @@ class SubscriptionProducerTest {
                 "testEventType",
                 "testSource",
                 1L,
-                "testProperties"
+                Map.of("key", "value")
         );
     }
 
